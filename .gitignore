@@ -8,3 +8,6 @@ npm-debug.log*
 coverage/
 .nyc_output/
 *.tsbuildinfo
+
+# README capture harness scratch dir (generated fixtures + outputs); assets/ is committed
+scripts/.demo/
