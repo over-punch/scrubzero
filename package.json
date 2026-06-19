@@ -14,7 +14,7 @@
     }
   },
   "bin": {
-    "pdf-redact": "./dist/cli.js"
+    "pdf-redact": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -42,7 +42,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Liiift-Studio/pdf-redact"
+    "url": "git+https://github.com/Liiift-Studio/pdf-redact.git"
   },
   "homepage": "https://scrubzero.org",
   "engines": {
