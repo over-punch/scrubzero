@@ -1,14 +1,24 @@
 // OG image for scrubzero — 1200×630, legal/classified theme.
 import { ImageResponse } from "next/og"
-import { readFileSync } from "fs"
-import { join } from "path"
 
 export const alt = "scrubzero — True PDF content-stream redaction"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-export default function Image() {
-	const font = readFileSync(join(process.cwd(), "public/fonts/Merriweather.woff2"))
+// Satori (next/og) cannot parse WOFF2; the in-repo Merriweather is WOFF2-only.
+// Google Fonts serves static TTF (which Satori supports) to legacy user agents.
+async function loadMerriweather(weight: number): Promise<ArrayBuffer> {
+	const css = await fetch(
+		`https://fonts.googleapis.com/css2?family=Merriweather:wght@${weight}`,
+		{ headers: { "User-Agent": "Mozilla/4.0" } },
+	).then((r) => r.text())
+	const url = css.match(/src:\s*url\((https:[^)]+\.ttf)\)/)?.[1]
+	if (!url) throw new Error("Merriweather TTF URL not found in Google Fonts CSS")
+	return fetch(url).then((r) => r.arrayBuffer())
+}
+
+export default async function Image() {
+	const font = await loadMerriweather(300)
 
 	return new ImageResponse(
 		(
@@ -38,14 +48,15 @@ export default function Image() {
 					<div style={{ height: "22px", background: "#111111", width: "100%", marginBottom: "32px" }} />
 					<div
 						style={{
+							display: "flex",
+							flexDirection: "column",
 							fontSize: "86px",
 							fontFamily: "Merriweather",
 							fontWeight: 300,
 							lineHeight: "1.05",
 						}}
 					>
-						True PDF
-						<br />
+						<span>True PDF</span>
 						<span style={{ fontStyle: "italic", opacity: 0.5 }}>redaction.</span>
 					</div>
 					<p style={{ fontSize: "21px", opacity: 0.5, margin: "28px 0 0", lineHeight: "1.5", fontFamily: "sans-serif" }}>
