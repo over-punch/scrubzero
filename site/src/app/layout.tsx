@@ -1,16 +1,18 @@
 import type { Metadata } from "next"
 import "./globals.css"
-import { Inter, Instrument_Serif } from "next/font/google"
+import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@/components/Analytics"
 import { CookieBanner } from "@/components/CookieBanner"
+import { RedactTransition } from "@/components/RedactTransition"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const instrumentSerif = Instrument_Serif({
 	subsets: ["latin"],
 	weight: "400",
 	style: ["normal", "italic"],
-	variable: "--font-display",
+	variable: "--font-instrument",
 })
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" })
 
 export const metadata: Metadata = {
 	title: "scrubzero — True PDF content-stream redaction",
@@ -34,9 +36,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html lang="en" className={`h-full ${inter.variable} ${instrumentSerif.variable}`}>
+		<html lang="en" className={`h-full ${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}>
 			<body className="min-h-full flex flex-col">
-				{children}
+				<RedactTransition>
+					{children}
+				</RedactTransition>
 				<Analytics />
 				<CookieBanner />
 			</body>

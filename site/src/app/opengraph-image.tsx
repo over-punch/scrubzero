@@ -1,12 +1,10 @@
-// OG image for scrubzero — 1200×630, legal/classified theme.
+// OG image for scrubzero — Redact mode (light). 1200×630.
 import { ImageResponse } from "next/og"
 
-export const alt = "scrubzero — True PDF content-stream redaction"
+export const alt = "scrubzero — Redact PDFs so nothing is recoverable"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
-// Satori (next/og) cannot parse WOFF2; the in-repo Merriweather is WOFF2-only.
-// Google Fonts serves static TTF (which Satori supports) to legacy user agents.
 async function loadMerriweather(weight: number): Promise<ArrayBuffer> {
 	const css = await fetch(
 		`https://fonts.googleapis.com/css2?family=Merriweather:wght@${weight}`,
@@ -17,63 +15,49 @@ async function loadMerriweather(weight: number): Promise<ArrayBuffer> {
 	return fetch(url).then((r) => r.arrayBuffer())
 }
 
+// A redaction bar with an exemption code at its right edge.
+function Bar({ w, code }: { w: string; code: string }) {
+	return (
+		<div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", width: w, height: "26px", background: "#141414", padding: "0 12px" }}>
+			<span style={{ fontSize: "13px", fontFamily: "monospace", color: "#f2ede3", opacity: 0.65 }}>{code}</span>
+		</div>
+	)
+}
+
 export default async function Image() {
 	const font = await loadMerriweather(300)
-
 	return new ImageResponse(
 		(
-			<div
-				style={{
-					background: "#f2ede3",
-					width: "100%",
-					height: "100%",
-					display: "flex",
-					flexDirection: "column",
-					padding: "72px 80px",
-					justifyContent: "space-between",
-					color: "#111111",
-				}}
-			>
+			<div style={{ background: "#f2ede3", width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: "68px 80px", justifyContent: "space-between", color: "#141414" }}>
 				{/* Masthead */}
-				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #111111", paddingBottom: "16px" }}>
-					<span style={{ fontSize: "13px", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "sans-serif" }}>
-						SCRUBZERO
-					</span>
-					<span style={{ fontSize: "13px", opacity: 0.4, fontFamily: "monospace" }}>scrubzero.org</span>
+				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #141414", paddingBottom: "16px" }}>
+					<span style={{ fontSize: "22px", fontFamily: "monospace", fontWeight: 700, letterSpacing: "-0.01em" }}>scrubzero</span>
+					<div style={{ display: "flex", alignItems: "center", border: "1.5px solid #2f6b45", borderRadius: "3px", padding: "6px 12px" }}>
+						<div style={{ width: "9px", height: "9px", background: "#2f6b45", marginRight: "9px" }} />
+						<span style={{ fontSize: "13px", fontFamily: "monospace", letterSpacing: "0.14em", color: "#2f6b45" }}>NO RECOVERABLE TEXT</span>
+					</div>
 				</div>
 
 				{/* Hero */}
-				<div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
-					{/* Redaction bar motif */}
-					<div style={{ height: "22px", background: "#111111", width: "100%", marginBottom: "32px" }} />
-					<div
-						style={{
-							display: "flex",
-							flexDirection: "column",
-							fontSize: "86px",
-							fontFamily: "Merriweather",
-							fontWeight: 300,
-							lineHeight: "1.05",
-						}}
-					>
+				<div style={{ display: "flex", flexDirection: "column" }}>
+					<div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "34px" }}>
+						<Bar w="100%" code="(b)(6)" />
+						<Bar w="74%" code="(b)(7)(C)" />
+						<Bar w="88%" code="(b)(6)" />
+					</div>
+					<div style={{ display: "flex", flexDirection: "column", fontSize: "82px", fontFamily: "Merriweather", fontWeight: 300, lineHeight: "1.04" }}>
 						<span>True PDF</span>
 						<span style={{ fontStyle: "italic", opacity: 0.5 }}>redaction.</span>
 					</div>
-					<p style={{ fontSize: "21px", opacity: 0.5, margin: "28px 0 0", lineHeight: "1.5", fontFamily: "sans-serif" }}>
-						Removes text from content streams before drawing the bar.
-						No hidden layers. No recoverable text. Node.js and Lambda.
-					</p>
 				</div>
 
 				{/* Footer */}
-				<div style={{ display: "flex", justifyContent: "flex-end" }}>
-					<span style={{ fontSize: "14px", opacity: 0.35, fontFamily: "monospace" }}>npm install @liiift-studio/pdf-redact</span>
+				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+					<span style={{ fontSize: "15px", fontFamily: "monospace", opacity: 0.5 }}>scrubzero.org</span>
+					<span style={{ fontSize: "15px", fontFamily: "monospace", opacity: 0.35 }}>detect · redact · check</span>
 				</div>
 			</div>
 		),
-		{
-			...size,
-			fonts: [{ name: "Merriweather", data: font, weight: 300, style: "normal" }],
-		},
+		{ ...size, fonts: [{ name: "Merriweather", data: font, weight: 300, style: "normal" }] },
 	)
 }

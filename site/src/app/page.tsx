@@ -1,17 +1,19 @@
-// scrubzero — live redaction demo.
+// scrubzero — REDACT mode (light). Toggle to /check for the audit mirror.
 import RedactDemo from "@/components/RedactDemo"
 import CodeBlock from "@/components/CodeBlock"
 import CopyInstall from "@/components/CopyInstall"
-import { version } from "../../../package.json"
+import { ThemeMode } from "@/components/ThemeMode"
+import { ModeToggle } from "@/components/ModeToggle"
+import { version } from "../../package.json"
 
 export const maxDuration = 60
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// Restrained numbered section header: 01 · Sandbox ──────────
+function SectionLabel({ n, children }: { n: string; children: React.ReactNode }) {
 	return (
-		<div className="flex items-center gap-4 mb-10">
-			<span className="text-[10px] uppercase tracking-[0.2em] shrink-0" style={{ color: "var(--ink-dim)" }}>
-				{children}
-			</span>
+		<div className="flex items-center gap-3 mb-10">
+			<span className="mono-label shrink-0" style={{ color: "var(--ink-faint)" }}>{n}</span>
+			<span className="mono-label shrink-0" style={{ color: "var(--foreground)" }}>{children}</span>
 			<div className="flex-1 h-px" style={{ background: "var(--rule)" }} />
 		</div>
 	)
@@ -19,51 +21,76 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export default function Home() {
 	return (
-		<main className="max-w-2xl mx-auto w-full px-6 py-12 flex flex-col">
+		<main className="max-w-2xl mx-auto w-full px-6 py-16 flex flex-col">
+			<ThemeMode mode="redact" />
 
-			{/* Document masthead */}
-			<header className="mb-16">
-				<div className="border-b-2 border-black pb-3 flex justify-between items-baseline">
-					<span className="text-xs uppercase tracking-[0.18em]">scrubzero</span>
-					<span className="text-xs font-mono" style={{ color: "var(--ink-dim)" }}>v{version}</span>
+			{/* ── Masthead ─────────────────────────────────────────────── */}
+			<header className="mb-14">
+				<div className="flex items-center justify-between gap-4">
+					<span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "1.35rem", letterSpacing: "-0.01em" }}>
+						scrubzero
+					</span>
+					<ModeToggle />
+				</div>
+				<div className="flex items-end justify-between gap-4 mt-3">
+					<span className="mono-label">Content-stream PDF redaction</span>
+					<span className="verdict verdict--pass">
+						<span className="verdict__glyph">✓</span> No recoverable text
+					</span>
+				</div>
+				<div className="h-px mt-5" style={{ background: "var(--rule-strong)" }} />
+				<div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 mono-label">
+					<span>v{version}</span>
+					<span>MIT</span>
+					<span>Node.js / Lambda</span>
+					<span>Zero-dependency core</span>
+				</div>
+				<div className="mt-2 mono-label" style={{ color: "var(--ink-faint)", letterSpacing: "0.1em" }}>
+					SHA-256 · input a4f2‥e19 → output 9f8e‥7d · verified
 				</div>
 			</header>
 
-			{/* Hero */}
+			{/* ── Hero ─────────────────────────────────────────────────── */}
 			<section className="mb-20">
 				<h1
-					className="leading-[1.0] mb-6"
-					style={{
-						fontFamily: "var(--font-display)",
-						fontSize: "clamp(3rem, 10vw, 5.5rem)",
-						letterSpacing: "-0.01em",
-					}}
+					className="leading-[1.0] mb-8"
+					style={{ fontFamily: "var(--font-display)", fontSize: "clamp(3rem, 10vw, 5.5rem)", letterSpacing: "-0.01em" }}
 				>
 					True PDF<br />
 					<span style={{ fontStyle: "italic" }}>redaction.</span>
 				</h1>
 
-				{/* The redaction bar — what scrubzero creates */}
-				<div className="h-6 bg-black w-full mb-6" aria-hidden="true" />
+				<div className="mb-8 flex flex-col gap-2" aria-hidden="true">
+					{[
+						{ w: "100%", text: "jdoe@agency.gov", code: "(b)(6)", d: "0.7s" },
+						{ w: "82%", text: "(202) 555-0147", code: "(b)(7)(C)", d: "0.95s" },
+						{ w: "94%", text: "Case 1:24-cr-00318", code: "(b)(6)", d: "1.2s" },
+					].map(({ w, text, code, d }, i) => (
+						<div key={i} className="redln redln--cover" style={{ width: w }}>
+							<span className="redln__text">{text}</span>
+							<span className="redln__bar" style={{ animationDelay: d }}><span>{code}</span></span>
+						</div>
+					))}
+				</div>
 
 				<p className="text-base leading-relaxed mb-8" style={{ color: "var(--ink-dim)" }}>
-					scrubzero removes text operators from the page content stream before drawing the visual bar.
-					No hidden layers. No recoverable text. Designed for server-side use in Node.js and AWS Lambda.
+					scrubzero removes text operators from the page content stream <em style={{ fontStyle: "normal", color: "var(--foreground)" }}>before</em> drawing the visual bar.
+					No hidden layers. No recoverable text. Built for server-side use in Node.js and AWS Lambda.
 				</p>
 
 				<div className="flex flex-wrap items-center gap-4">
 					<CopyInstall pkg="@liiift-studio/pdf-redact" />
 					<a
 						href="https://npmjs.com/package/@liiift-studio/pdf-redact"
-						className="text-xs font-medium px-4 py-2 rounded-full transition-colors"
-						style={{ background: "var(--btn-bg)", color: "var(--btn-fg)" }}
+						className="text-xs font-medium px-4 py-2 rounded-full transition-opacity hover:opacity-80"
+						style={{ background: "var(--btn-bg)", color: "var(--btn-fg)", fontFamily: "var(--font-mono)" }}
 					>
 						npm
 					</a>
 					<a
 						href="https://github.com/Liiift-Studio/pdf-redact"
-						className="text-xs px-4 py-2 rounded-full border transition-colors opacity-70 hover:opacity-100"
-						style={{ borderColor: "var(--rule)" }}
+						className="text-xs px-4 py-2 rounded-full border transition-opacity opacity-70 hover:opacity-100"
+						style={{ borderColor: "var(--border)", fontFamily: "var(--font-mono)" }}
 					>
 						GitHub
 					</a>
@@ -72,49 +99,33 @@ export default function Home() {
 
 			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
 
-			{/* Sandbox */}
+			{/* ── Sandbox ──────────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel>Sandbox</SectionLabel>
+				<SectionLabel n="01">Sandbox</SectionLabel>
 				<p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
-					Upload a PDF, enter a search pattern (plain text or <code className="font-mono text-xs bg-black/6 px-1 rounded">/regex/flags</code>), download the redacted result.
+					Upload a PDF, enter a search pattern (plain text or <code className="font-mono text-xs px-1 rounded" style={{ background: "var(--surface-2)" }}>/regex/flags</code>), download the redacted result.
 				</p>
 				<RedactDemo />
 			</section>
 
 			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
 
-			{/* How it works */}
+			{/* ── How it works ─────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel>How it works</SectionLabel>
+				<SectionLabel n="02">How it works</SectionLabel>
 				<div className="flex flex-col divide-y" style={{ borderColor: "var(--rule)" }}>
 					{[
-						{
-							n: "01",
-							label: "Content stream scrubbing",
-							body: "pdfjs-dist extracts text items with positions. For each match, scrubzero locates the BT/ET block in the raw content stream bytes, finds the text-drawing operators, and blanks their string arguments. The glyph data is gone before the bar is drawn.",
-						},
-						{
-							n: "02",
-							label: "Visual bar overlay",
-							body: "After scrubbing, pdf-lib draws a filled rectangle over the region using the specified color (default black). The bar is a genuine visual layer on top of now-empty space — there is no text underneath to recover.",
-						},
-						{
-							n: "03",
-							label: "Metadata sanitization",
-							body: "DocInfo fields (Title, Author, Subject, Keywords, Producer, Creator) are wiped and timestamps reset. The XMP metadata stream is removed from the document catalog. Enabled by default, disable with sanitizeMetadata: false.",
-						},
-						{
-							n: "04",
-							label: "Audit manifest",
-							body: "When generateManifest: true, each redaction entry is recorded with page number, bounding box, timestamp, optional redactor ID, basis code, and SHA-256 hashes of both the input and output PDF for chain-of-custody compliance.",
-						},
+						{ n: "01", label: "Content stream scrubbing", body: "pdfjs-dist extracts text items with positions. For each match, scrubzero locates the BT/ET block in the raw content stream bytes, finds the text-drawing operators, and blanks their string arguments. The glyph data is gone before the bar is drawn." },
+						{ n: "02", label: "Visual bar overlay", body: "After scrubbing, pdf-lib draws a filled rectangle over the region using the specified color (default black). The bar is a genuine visual layer on top of now-empty space — there is no text underneath to recover." },
+						{ n: "03", label: "Metadata sanitization", body: "DocInfo fields (Title, Author, Subject, Keywords, Producer, Creator) are wiped and timestamps reset. The XMP metadata stream is removed from the document catalog. Enabled by default, disable with sanitizeMetadata: false." },
+						{ n: "04", label: "Audit manifest", body: "When generateManifest: true, each redaction entry is recorded with page number, bounding box, timestamp, optional redactor ID, basis code, and SHA-256 hashes of both the input and output PDF for chain-of-custody compliance." },
 					].map(({ n, label, body }) => (
 						<div key={n} className="py-6 flex flex-col gap-2">
 							<div className="flex items-baseline gap-4">
-								<span className="text-xs font-mono" style={{ color: "var(--ink-dim)" }}>{n}</span>
+								<span className="mono-label" style={{ color: "var(--ink-faint)" }}>{n}</span>
 								<span className="text-sm font-medium">{label}</span>
 							</div>
-							<p className="text-sm leading-relaxed pl-8" style={{ color: "var(--ink-dim)" }}>{body}</p>
+							<p className="text-sm leading-relaxed pl-9" style={{ color: "var(--ink-dim)" }}>{body}</p>
 						</div>
 					))}
 				</div>
@@ -122,12 +133,12 @@ export default function Home() {
 
 			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
 
-			{/* Usage */}
+			{/* ── Usage ────────────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel>Usage</SectionLabel>
+				<SectionLabel n="03">Usage</SectionLabel>
 				<div className="flex flex-col gap-10">
 					<div className="flex flex-col gap-3">
-						<p className="text-xs" style={{ color: "var(--ink-dim)" }}>Search and redact by text pattern</p>
+						<p className="mono-label">Search and redact by text pattern</p>
 						<CodeBlock code={`import { searchAndRedact } from '@liiift-studio/pdf-redact'
 import { readFile, writeFile } from 'node:fs/promises'
 
@@ -141,7 +152,7 @@ await writeFile('redacted.pdf', result.pdf)
 console.log(\`\${result.redactedCount} regions redacted\`)`} />
 					</div>
 					<div className="flex flex-col gap-3">
-						<p className="text-xs" style={{ color: "var(--ink-dim)" }}>Redact specific regions by coordinate</p>
+						<p className="mono-label">Redact specific regions by coordinate</p>
 						<CodeBlock code={`import { redact } from '@liiift-studio/pdf-redact'
 
 const result = await redact(pdf.buffer, [
@@ -150,7 +161,7 @@ const result = await redact(pdf.buffer, [
 ])`} />
 					</div>
 					<div className="flex flex-col gap-3">
-						<p className="text-xs" style={{ color: "var(--ink-dim)" }}>Entity patterns — SSN, phone, email, credit card, and more</p>
+						<p className="mono-label">Entity patterns — SSN, phone, email, credit card, and more</p>
 						<CodeBlock code={`import { redactEntities } from '@liiift-studio/pdf-redact'
 
 const result = await redactEntities(pdf.buffer, [
@@ -158,7 +169,7 @@ const result = await redactEntities(pdf.buffer, [
 ])`} />
 					</div>
 					<div className="flex flex-col gap-3">
-						<p className="text-xs" style={{ color: "var(--ink-dim)" }}>Audit manifest with FOIA exemption codes</p>
+						<p className="mono-label">Audit manifest with FOIA exemption codes</p>
 						<CodeBlock code={`const result = await redact(pdf.buffer, regions, {
   generateManifest: true,
   redactorId: 'agent-smith',
@@ -167,7 +178,7 @@ const result = await redactEntities(pdf.buffer, [
 })`} />
 					</div>
 					<div className="flex flex-col gap-3">
-						<p className="text-xs" style={{ color: "var(--ink-dim)" }}>CLI</p>
+						<p className="mono-label">CLI</p>
 						<CodeBlock code={`npx @liiift-studio/pdf-redact search document.pdf "John Smith" --output redacted.pdf
 npx @liiift-studio/pdf-redact search document.pdf "/\\d{3}-\\d{2}-\\d{4}/g" --color #1a1a1a
 npx @liiift-studio/pdf-redact entities document.pdf --types ssn,phone,email
@@ -177,13 +188,13 @@ npx @liiift-studio/pdf-redact verify redacted.pdf`} />
 
 				{/* Options table */}
 				<div className="mt-10 flex flex-col gap-3">
-					<p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--ink-dim)" }}>RedactOptions</p>
-					<table className="w-full text-xs border-collapse">
+					<p className="mono-label">RedactOptions</p>
+					<table className="w-full text-xs border-collapse" style={{ fontFamily: "var(--font-mono)" }}>
 						<thead>
 							<tr className="border-b" style={{ borderColor: "var(--rule)" }}>
-								<th className="pb-2 pr-6 font-normal text-left" style={{ color: "var(--ink-dim)" }}>Option</th>
-								<th className="pb-2 pr-6 font-normal text-left" style={{ color: "var(--ink-dim)" }}>Default</th>
-								<th className="pb-2 font-normal text-left" style={{ color: "var(--ink-dim)" }}>Description</th>
+								<th className="pb-2 pr-6 font-normal text-left mono-label">Option</th>
+								<th className="pb-2 pr-6 font-normal text-left mono-label">Default</th>
+								<th className="pb-2 font-normal text-left mono-label">Description</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -196,9 +207,9 @@ npx @liiift-studio/pdf-redact verify redacted.pdf`} />
 								["basisCode", "undefined", "FOIA basis code (e.g. 'b6') rendered in the bar when markers are on"],
 							].map(([opt, def, desc]) => (
 								<tr key={opt} className="border-b" style={{ borderColor: "var(--rule)" }}>
-									<td className="py-2.5 pr-6 font-mono">{opt}</td>
-									<td className="py-2.5 pr-6 font-mono" style={{ color: "var(--ink-dim)" }}>{def}</td>
-									<td className="py-2.5" style={{ color: "var(--ink-dim)" }}>{desc}</td>
+									<td className="py-2.5 pr-6">{opt}</td>
+									<td className="py-2.5 pr-6" style={{ color: "var(--ink-dim)" }}>{def}</td>
+									<td className="py-2.5" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-sans)" }}>{desc}</td>
 								</tr>
 							))}
 						</tbody>
@@ -206,19 +217,24 @@ npx @liiift-studio/pdf-redact verify redacted.pdf`} />
 				</div>
 			</section>
 
-			{/* Footer */}
-			<footer className="pt-10 border-t-2 border-black flex flex-col gap-6 text-xs">
-				<div className="flex flex-col gap-1">
-					<p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--ink-dim)" }}>Also from Liiift Studio</p>
-					<a href="https://unseal.dev" className="text-sm hover:opacity-60 transition-opacity">
-						unseal — Detect and remove fake PDF redactions →
+			{/* ── Footer ───────────────────────────────────────────────── */}
+			<footer className="pt-8 flex flex-col gap-6 text-xs" style={{ borderTop: "1px solid var(--rule-strong)" }}>
+				<div className="flex flex-col gap-2">
+					<span className="mono-label">The other side of the tool</span>
+					<a href="/check" className="group inline-flex items-baseline gap-1 text-sm">
+						<span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>Check</span>
+						<span style={{ color: "var(--ink-dim)" }}>— is a PDF you received actually redacted?</span>
+						<span className="inline-block transition-transform group-hover:translate-x-1" style={{ color: "var(--ink-dim)" }}>→</span>
 					</a>
 				</div>
-				<div className="flex flex-wrap gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)" }}>
+				<div className="flex flex-wrap items-center gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>
 					<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">liiift.studio</a>
 					<a href="https://github.com/Liiift-Studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
 					<a href="https://npmjs.com/package/@liiift-studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
-					<span className="ml-auto font-mono">v{version}</span>
+					<span>v{version}</span>
+					<span className="ml-auto px-1.5 py-0.5" style={{ color: "var(--ink-faint)", border: "1px solid var(--border)", borderRadius: "2px", letterSpacing: "0.08em" }}>
+						SCRUBZERO-000447
+					</span>
 				</div>
 			</footer>
 

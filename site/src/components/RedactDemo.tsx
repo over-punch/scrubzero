@@ -82,13 +82,10 @@ export default function RedactDemo() {
 		<form onSubmit={handleSubmit} className="flex flex-col gap-8">
 			{/* Step 1 — drop zone */}
 			<div className="flex flex-col gap-3">
-				<p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--ink-dim)" }}>01 — Upload PDF</p>
+				<p className="mono-label">01 — Upload PDF</p>
 				<label
-					className={`
-						flex flex-col items-center justify-center gap-3 rounded border-2 border-dashed px-8 py-10
-						cursor-pointer transition-colors
-						${isDragging ? "border-black/40 bg-black/5" : "border-black/15 hover:border-black/25 hover:bg-black/3"}
-					`}
+					className="dropzone flex flex-col items-center justify-center gap-3 rounded px-8 py-10 cursor-pointer"
+					data-drag={isDragging}
 					onDragOver={onDragOver}
 					onDragLeave={onDragLeave}
 					onDrop={onDrop}
@@ -118,7 +115,7 @@ export default function RedactDemo() {
 							<p className="text-sm" style={{ color: "var(--ink-dim)" }}>
 								Drop a PDF here, or <span className="underline underline-offset-2" style={{ color: "var(--foreground)" }}>browse</span>
 							</p>
-							<p className="text-xs" style={{ color: "var(--ink-dim)", opacity: 0.5 }}>Max 4 MB</p>
+							<p className="mono-label" style={{ color: "var(--ink-faint)" }}>Max 4 MB</p>
 						</>
 					)}
 				</label>
@@ -126,29 +123,29 @@ export default function RedactDemo() {
 
 			{/* Step 2 — pattern */}
 			<div className="flex flex-col gap-3">
-				<p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--ink-dim)" }}>02 — Search pattern</p>
+				<p className="mono-label">02 — Search pattern</p>
 				<input
 					type="text"
 					name="pattern"
 					required
 					placeholder={`e.g.  John Smith  or  /\\d{3}-\\d{2}-\\d{4}/  for SSNs`}
-					className="rounded border border-black/15 px-4 py-3 text-sm focus:outline-none focus:border-black/35 transition-colors"
-					style={{ background: "var(--code-bg)" }}
+					className="field rounded px-4 py-3 text-sm"
 				/>
 				<p className="text-xs" style={{ color: "var(--ink-dim)" }}>
-					Plain text or <code className="font-mono text-xs bg-black/6 px-1 rounded">/regex/flags</code> — all matches on every page are redacted
+					Plain text or <code className="font-mono text-xs px-1 rounded" style={{ background: "var(--surface-2)" }}>/regex/flags</code> — all matches on every page are redacted
 				</p>
 			</div>
 
 			{/* Step 3 — color */}
 			<div className="flex flex-col gap-3">
-				<p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: "var(--ink-dim)" }}>03 — Bar color</p>
+				<p className="mono-label">03 — Bar color</p>
 				<div className="flex items-center gap-3">
 					<input
 						type="color"
 						value={color}
 						onChange={e => setColor(e.target.value)}
-						className="w-9 h-9 rounded cursor-pointer border border-black/15 p-0.5 bg-transparent"
+						className="w-9 h-9 rounded cursor-pointer p-0.5 bg-transparent"
+						style={{ border: "1px solid var(--border)" }}
 					/>
 					<span className="text-sm font-mono" style={{ color: "var(--ink-dim)" }}>{color}</span>
 				</div>
@@ -171,14 +168,14 @@ export default function RedactDemo() {
 
 			{/* Error */}
 			{state.status === "error" && (
-				<div className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+				<div className="alert rounded px-4 py-3 text-sm">
 					{state.message}
 				</div>
 			)}
 
 			{/* Result */}
 			{state.status === "done" && (
-				<div className="flex flex-col gap-3 rounded border border-black/15 px-5 py-4 bg-black/3">
+				<div className="panel flex flex-col gap-3 rounded px-5 py-4">
 					<div className="flex items-center gap-2">
 						<svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-60">
 							<circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4"/>
@@ -196,7 +193,8 @@ export default function RedactDemo() {
 					<button
 						type="button"
 						onClick={downloadResult}
-						className="self-start rounded border border-black/15 px-4 py-2 text-sm transition-opacity hover:opacity-60"
+						className="self-start rounded px-4 py-2 text-sm transition-opacity hover:opacity-60"
+						style={{ border: "1px solid var(--border)" }}
 					>
 						Download redacted PDF
 					</button>

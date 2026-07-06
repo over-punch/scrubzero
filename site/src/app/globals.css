@@ -1,12 +1,55 @@
 @import "tailwindcss";
 @import "./base.css";
 
-:root {
-	--background: #f2ede3;
-	--foreground: #111111;
-	--rule: rgba(17, 17, 17, 0.1);
-	--ink-dim: rgba(17, 17, 17, 0.45);
-	--code-bg: rgba(17, 17, 17, 0.06);
-	--btn-bg: #111111;
+/* scrubzero — two modes of one product.
+   REDACT (default, light): you draw the black bars; nothing is recoverable.
+   CHECK  (dark): the mirror — expose redactions that don't actually hold. */
+:root,
+html[data-mode="redact"] {
+	--background: #f2ede3;   /* manila paper */
+	--foreground: #141414;   /* ink */
+
+	--ink-dim: rgba(20, 20, 20, 0.5);
+	--ink-faint: rgba(20, 20, 20, 0.32);
+	--rule: rgba(20, 20, 20, 0.12);
+	--rule-strong: rgba(20, 20, 20, 0.85);
+	--border: rgba(20, 20, 20, 0.16);
+	--border-strong: rgba(20, 20, 20, 0.5);
+	--surface: rgba(20, 20, 20, 0.03);
+	--surface-2: rgba(20, 20, 20, 0.06);
+	--code-bg: rgba(20, 20, 20, 0.05);
+	--grid: rgba(20, 20, 20, 0.045);
+
+	--btn-bg: #141414;
 	--btn-fg: #f2ede3;
+
+	--stamp: #a02a1e;
+	--verdict-pass: #2f6b45;
+	--danger: #a02a1e;
+	--danger-bg: rgba(160, 42, 30, 0.08);
+}
+
+/* CHECK mode — the inverted, dark mirror. */
+html[data-mode="check"] {
+	--background: #0d0d0f;   /* the bar */
+	--foreground: #ece6d8;   /* recovered text */
+
+	--ink-dim: rgba(236, 230, 216, 0.5);
+	--ink-faint: rgba(236, 230, 216, 0.3);
+	--rule: rgba(236, 230, 216, 0.12);
+	--rule-strong: rgba(236, 230, 216, 0.6);
+	--border: rgba(236, 230, 216, 0.16);
+	--border-strong: rgba(236, 230, 216, 0.42);
+	--surface: rgba(236, 230, 216, 0.035);
+	--surface-2: rgba(236, 230, 216, 0.07);
+	--code-bg: rgba(236, 230, 216, 0.05);
+	--grid: rgba(236, 230, 216, 0.04);
+
+	--btn-bg: #ece6d8;
+	--btn-fg: #0d0d0f;
+
+	--stamp: #e0564a;
+	--verdict-pass: #5fbd85;
+	--danger: #e0564a;
+	--danger-bg: rgba(224, 86, 74, 0.1);
 }

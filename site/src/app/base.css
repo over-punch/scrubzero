@@ -1,9 +1,10 @@
-/* base.css — legal/document base styles for pdf-redact */
+/* base.css — shared "dossier" design system for scrubzero / unseal.
+   Structure lives here; palette (light vs dark mirror) lives in globals.css. */
 
 :root {
-	--foreground: #111111;
-	--font-sans: sans-serif;
-	--font-display: serif;
+	--font-sans: var(--font-inter, "Inter", sans-serif);
+	--font-display: var(--font-instrument, serif);
+	--font-mono: var(--font-jetbrains, ui-monospace, "SFMono-Regular", monospace);
 }
 
 @theme inline {
@@ -15,27 +16,222 @@
 	box-sizing: border-box;
 }
 
+html {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-strong) transparent;
+}
+
 body {
 	background: var(--background);
 	color: var(--foreground);
 	font-family: var(--font-sans);
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
+	/* Smooth the light↔dark flip when toggling Redact / Check. */
+	transition: background-color 0.45s ease, color 0.45s ease;
+	/* Faint engineering grid — the "form" substrate. Kept very low contrast. */
+	background-image:
+		linear-gradient(var(--grid) 1px, transparent 1px),
+		linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+	background-size: 28px 28px;
+	background-position: center top;
 }
 
-html {
-	scrollbar-width: thin;
-	scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+button, [role="button"] { cursor: pointer; }
+
+::selection {
+	background: var(--foreground);
+	color: var(--background);
 }
 
-h1, h2, h3 {
-	text-wrap: balance;
+/* ── Classification banner ─────────────────────────────────────────────
+   Thin full-bleed strip at the very top of the document. */
+.classbar {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.28em;
+	text-transform: uppercase;
+	color: var(--btn-fg);
+	background: var(--btn-bg);
+	padding: 6px 0;
+	text-align: center;
 }
 
-p {
-	text-wrap: pretty;
+/* ── Monospace data label ──────────────────────────────────────────────
+   The FBI-form field label look: "FILE NO.", "SUBJECT:", "01". */
+.mono-label {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--ink-dim);
 }
 
-button, [role="button"] {
-	cursor: pointer;
+/* ── Mode transition wipe ──────────────────────────────────────────────
+   Toggling Redact/Check "redacts" the screen: an ink bar sweeps across,
+   the mode flips underneath it, then it sweeps off to reveal the mirror. */
+.wipe {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	pointer-events: none;
+	background: #0d0d0f;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding: 0 clamp(1.5rem, 6vw, 4rem);
+}
+.wipe > span {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.34em;
+	text-transform: uppercase;
+	color: rgba(236, 230, 216, 0.55);
+	white-space: nowrap;
+}
+.wipe--in { animation: wipe-in 0.4s cubic-bezier(0.7, 0, 0.25, 1) forwards; }
+.wipe--out { animation: wipe-out 0.44s cubic-bezier(0.7, 0, 0.25, 1) forwards; }
+@keyframes wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes wipe-out { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
+
+/* ── Mode toggle (Redact | Check) ──────────────────────────────────────*/
+.modetoggle {
+	display: inline-flex;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	padding: 2px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+}
+.modetoggle a {
+	padding: 4px 13px;
+	border-radius: 999px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--ink-dim);
+	transition: color 0.2s ease, background 0.2s ease;
+}
+.modetoggle a:hover { color: var(--foreground); }
+.modetoggle a[data-active="true"] {
+	background: var(--btn-bg);
+	color: var(--btn-fg);
+}
+.modetoggle a[data-active="true"]:hover { color: var(--btn-fg); }
+
+/* ── Verdict chip ──────────────────────────────────────────────────────
+   Forensic scanner result. scrubzero passes; unseal fails. */
+.verdict {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-family: var(--font-mono);
+	font-weight: 600;
+	font-size: 10px;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	padding: 4px 9px;
+	border-radius: 2px;
+	border: 1.5px solid currentColor;
+	white-space: nowrap;
+	user-select: none;
+}
+.verdict--pass { color: var(--verdict-pass); }
+.verdict--fail { color: var(--stamp); }
+.verdict__glyph { font-size: 11px; line-height: 1; }
+
+/* ── Registration ticks (crop marks) on the document frame ─────────────*/
+.ticks { position: relative; }
+.ticks::before,
+.ticks::after {
+	content: "";
+	position: absolute;
+	width: 9px;
+	height: 9px;
+	border-color: var(--border-strong);
+	border-style: solid;
+	opacity: 0.55;
+}
+.ticks::before { top: -1px; left: -9px; border-width: 1px 0 0 1px; }
+.ticks::after { bottom: -1px; right: -9px; border-width: 0 1px 1px 0; }
+
+/* ── Redaction line (the shared motif) ─────────────────────────────────
+   A line of sensitive text with an ink bar carrying a FOIA exemption code.
+   --cover (scrubzero): text is shown, then the bar sweeps ACROSS to hide it.
+   --reveal (unseal):   the bar starts full, then RETRACTS to expose the text,
+                        leaving a stub with the (false) exemption code.
+   Both animate width (not transform) so the code stays crisp. */
+.redln {
+	position: relative;
+	height: 1.4rem;
+	display: flex;
+	align-items: center;
+	overflow: hidden;
+}
+.redln__text {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	letter-spacing: 0.02em;
+	color: var(--foreground);
+	white-space: nowrap;
+	padding-left: 0.2rem;
+}
+.redln__bar {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	background: var(--btn-bg);
+	padding: 0 0.55rem;
+}
+.redln__bar > span {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--btn-fg);
+	opacity: 0.65;
+	white-space: nowrap;
+}
+/* cover: bar grows from the left across the whole line, hiding the text */
+.redln--cover .redln__bar {
+	left: 0;
+	width: 100%;
+	animation: redln-cover 0.9s cubic-bezier(0.7, 0, 0.2, 1) both;
+}
+@keyframes redln-cover { from { width: 0; } to { width: 100%; } }
+/* reveal: bar shrinks toward the right, exposing the text, leaving a stub */
+.redln--reveal .redln__bar {
+	right: 0;
+	width: 100%;
+	animation: redln-reveal 1s cubic-bezier(0.7, 0, 0.2, 1) both;
+}
+@keyframes redln-reveal { from { width: 100%; } to { width: 3rem; } }
+@media (prefers-reduced-motion: reduce) {
+	.redln--cover .redln__bar { animation: none; width: 100%; }
+	.redln--reveal .redln__bar { animation: none; width: 3rem; }
+}
+
+/* ── Form controls (token-driven so the dark mirror inherits) ──────────*/
+.dropzone {
+	border: 2px dashed var(--border);
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dropzone:hover { border-color: var(--border-strong); background: var(--surface); }
+.dropzone[data-drag="true"] { border-color: var(--border-strong); background: var(--surface-2); }
+
+.field {
+	border: 1px solid var(--border);
+	background: var(--code-bg);
+	transition: border-color 0.15s ease;
+}
+.field:focus { outline: none; border-color: var(--border-strong); }
+
+.panel { border: 1px solid var(--border); background: var(--surface); }
+
+.alert {
+	border: 1px solid var(--danger);
+	background: var(--danger-bg);
+	color: var(--danger);
 }

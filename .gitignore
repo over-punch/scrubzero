@@ -11,3 +11,4 @@ coverage/
 
 # README capture harness scratch dir (generated fixtures + outputs); assets/ is committed
 scripts/.demo/
+.vercel
