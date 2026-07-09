@@ -235,3 +235,11 @@ button, [role="button"] { cursor: pointer; }
 	background: var(--danger-bg);
 	color: var(--danger);
 }
+
+/* Amber caution — for "covered but not removed" and scanned-PDF notices, which
+   are warnings the user must heed, not hard errors. */
+.alert[data-tone="warn"] {
+	border-color: var(--warn);
+	background: var(--warn-bg);
+	color: var(--warn);
+}

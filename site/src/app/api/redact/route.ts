@@ -1,7 +1,38 @@
 // API route — receives a PDF and a search pattern, returns a redacted PDF as base64.
+// The uploaded PDF is held in memory only for the length of this request and is
+// never written to disk or persisted; nothing is retained after the response.
 import { type NextRequest } from "next/server"
 
+export const runtime = "nodejs"
+
 const MAX_BYTES = 4 * 1024 * 1024 // 4 MB
+
+// Roughly how much extractable text a PDF must have before we stop treating it
+// as a scanned/image document. Pattern and entity redaction operate on the text
+// layer, so a scanned page yields nothing to remove — the user must be told.
+const MIN_TEXT_CHARS = 24
+
+/**
+ * Return the total number of non-whitespace characters extractable from the PDF.
+ * A near-zero count means the content is a raster image (a scan), not text.
+ */
+async function extractableTextLength(data: Uint8Array): Promise<number> {
+	try {
+		const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs")
+		const doc = await pdfjs.getDocument({ data: new Uint8Array(data), useSystemFonts: true, isEvalSupported: false }).promise
+		let chars = 0
+		for (let p = 1; p <= doc.numPages; p++) {
+			const page = await doc.getPage(p)
+			const content = await page.getTextContent()
+			for (const i of content.items) chars += ("str" in i ? i.str.replace(/\s/g, "").length : 0)
+			page.cleanup()
+		}
+		await doc.destroy()
+		return chars
+	} catch {
+		return -1 // unknown — don't assert "scanned" if parsing failed
+	}
+}
 
 export async function POST(req: NextRequest) {
 	let formData: FormData
@@ -65,7 +96,23 @@ export async function POST(req: NextRequest) {
 			patterns = [{ pattern: searchPattern, color: redactionColor, label: "REDACTED" }]
 		}
 
+		// Flag scanned/image PDFs: text-based redaction cannot touch image pixels,
+		// so a near-empty text layer means the bar only covers, never removes.
+		const textLen = await extractableTextLength(new Uint8Array(buffer))
+		const scanned = textLen >= 0 && textLen < MIN_TEXT_CHARS
+
 		const result = await searchAndRedact(buffer, patterns)
+
+		// Surface any library-level cautions (e.g. bars over image/vector content).
+		// Read defensively so the site builds against either the current or the
+		// warnings-aware (>= 0.2.0) release of @liiift-studio/pdf-redact.
+		const libWarnings = (result as { warnings?: Array<{ message: string }> }).warnings ?? []
+		const warnings = libWarnings.map((w) => w.message)
+		if (scanned) {
+			warnings.unshift(
+				"This PDF has little or no extractable text — it looks like a scan or image. Text and pattern redaction only remove the text layer, so nothing was removed from the image itself. The bar covers it on screen but the original pixels remain recoverable. Flatten or rasterise the page to truly redact a scan.",
+			)
+		}
 
 		// Encode the resulting PDF as base64 for transfer.
 		const base64 = Buffer.from(result.pdf).toString("base64")
@@ -73,6 +120,8 @@ export async function POST(req: NextRequest) {
 			pdf: base64,
 			redactedCount: result.redactedCount,
 			pagesAffected: result.pagesAffected,
+			scanned,
+			warnings,
 		})
 	} catch (err) {
 		console.error("pdf-redact error:", err)

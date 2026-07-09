@@ -16,7 +16,7 @@ interface Finding {
 type State =
 	| { status: "idle" }
 	| { status: "scanning" }
-	| { status: "scanned"; findings: Finding[]; pageCount: number; aiUsed: boolean; total: number }
+	| { status: "scanned"; findings: Finding[]; pageCount: number; aiUsed: boolean; total: number; scanned: boolean }
 	| { status: "redacting" }
 	| { status: "done"; blob: Blob; filename: string; redactedCount: number }
 	| { status: "error"; message: string }
@@ -46,11 +46,11 @@ export default function DetectDemo() {
 		form.set("options", JSON.stringify({ ai: useAI, apiKey: useAI ? apiKey : undefined }))
 		try {
 			const res = await fetch("/api/detect", { method: "POST", body: form })
-			const data = await res.json() as { findings?: Finding[]; pageCount?: number; aiUsed?: boolean; total?: number; error?: string }
+			const data = await res.json() as { findings?: Finding[]; pageCount?: number; aiUsed?: boolean; total?: number; scanned?: boolean; error?: string }
 			if (!res.ok || data.error) { setState({ status: "error", message: data.error ?? "Detection failed" }); return }
 			const findings = data.findings ?? []
 			setSelected(new Set(findings.map((f) => f.type))) // default: redact everything found
-			setState({ status: "scanned", findings, pageCount: data.pageCount ?? 0, aiUsed: !!data.aiUsed, total: data.total ?? 0 })
+			setState({ status: "scanned", findings, pageCount: data.pageCount ?? 0, aiUsed: !!data.aiUsed, total: data.total ?? 0, scanned: !!data.scanned })
 		} catch {
 			setState({ status: "error", message: "Network error — please try again" })
 		}
@@ -160,13 +160,25 @@ export default function DetectDemo() {
 
 			{state.status === "error" && <div className="alert rounded px-4 py-3 text-sm">{state.message}</div>}
 
+			{/* Scanned-PDF caution: detection reads the text layer, which a scan lacks. */}
+			{state.status === "scanned" && state.scanned && (
+				<div className="alert rounded px-4 py-3 flex flex-col gap-1.5" data-tone="warn">
+					<p className="text-xs font-medium" style={{ letterSpacing: "0.04em" }}>⚠ This looks like a scanned or image-only PDF</p>
+					<p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+						Detection reads the document&apos;s text layer — a scan has none, so anything sensitive here lives in the page image and <em style={{ fontStyle: "normal", color: "var(--foreground)" }}>cannot be found or redacted by text tools</em>. A &ldquo;nothing found&rdquo; result does not mean the page is clean. Run the page through OCR first, or rasterise-and-replace to truly redact it.
+					</p>
+				</div>
+			)}
+
 			{/* Findings */}
 			{state.status === "scanned" && (
 				state.findings.length === 0 ? (
+					state.scanned ? null : (
 					<div className="panel rounded px-4 py-4 text-sm" style={{ color: "var(--verdict-pass)" }}>
 						No sensitive data detected across {state.pageCount} page{state.pageCount !== 1 ? "s" : ""}.
 						{state.aiUsed ? " (regex + AI)" : " (regex only — enable AI for names & addresses)"}
 					</div>
+					)
 				) : (
 					<div className="flex flex-col gap-4">
 						<p className="text-sm">

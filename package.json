@@ -1,6 +1,6 @@
 {
   "name": "@liiift-studio/pdf-redact",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "True PDF content-stream redaction for Node.js and Lambda. No native binaries.",
   "type": "module",
   "main": "./dist/index.cjs",

@@ -11,6 +11,7 @@ export type {
 	SearchPattern,
 	RedactOptions,
 	RedactResult,
+	RedactWarning,
 	RedactionManifest,
 	RedactionEntry,
 	NormalizedRegion,
@@ -21,4 +22,4 @@ export type { BatchItem, BatchResult } from './batch.js';
 
 export type { EntityType, EntityPattern } from './entity-patterns.js';
 
-export type { VerificationResult, VerificationViolation } from './verify.js';
+export type { VerificationResult, VerificationViolation, VerificationWarning } from './verify.js';

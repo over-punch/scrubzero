@@ -258,8 +258,9 @@ Verify that a redacted PDF has no text remaining beneath its visual redaction ba
 import { verify } from '@liiift-studio/pdf-redact';
 
 const result = await verify(redactedPdf.buffer);
-console.log(result.clean);       // true if no text found under any bar
+console.log(result.clean);       // true if no recoverable TEXT found under any bar
 console.log(result.violations);  // VerificationViolation[]
+console.log(result.warnings);    // VerificationWarning[] — cases the text check can't see
 ```
 
 ```typescript
@@ -268,9 +269,17 @@ interface VerificationViolation {
   bbox: [number, number, number, number];
   recoveredText: string;
 }
+
+interface VerificationWarning {
+  type: 'image-under-redaction' | 'scanned-page';
+  page: number;
+  message: string;
+}
 ```
 
-> **Treat `verify()` as part of the redaction, not an afterthought.** Because content-stream scrubbing is best-effort (see below), running `verify()` on the output — and failing closed when `clean === false` — is what turns "looks redacted" into "is redacted".
+> **`clean` covers the text layer only.** The text check is blind to raster imagery, so a **scanned page** — or a bar drawn over an image — can return `clean: true` while the sensitive content survives in the image pixels. When that risk is present, `verify()` populates `warnings`. **A document is only verifiably safe when `clean === true` *and* `warnings` is empty**; the CLI's `verify` command exits non-zero if either check fails.
+
+> **Treat `verify()` as part of the redaction, not an afterthought.** Because content-stream scrubbing is best-effort (see below), running `verify()` on the output — and failing closed when it isn't clean — is what turns "looks redacted" into "is redacted".
 
 ---
 
@@ -294,7 +303,10 @@ interface VerificationViolation {
 | `pdf` | `Uint8Array` | The redacted PDF bytes, ready to write to disk or stream |
 | `redactedCount` | `number` | Total number of regions redacted |
 | `pagesAffected` | `number[]` | Sorted 1-indexed list of pages that had at least one redaction |
+| `warnings` | `RedactWarning[]` | Cautions where a bar was drawn but nothing was removed — a scanned page or a region over image/vector content, where the covered content stays recoverable. Empty when every region's text was scrubbed. |
 | `manifest` | `RedactionManifest` | Audit manifest — present when `generateManifest: true` |
+
+Each `RedactWarning` is `{ type: 'visual-only-region' | 'scanned-page'; page: number; message: string }`. A non-empty `warnings` array means part of the document was only *covered*, not redacted — surface it to the user rather than reporting success.
 
 The manifest (when requested) records, per region, the page, bounding box, `redactorId`, `basisCode`, an ISO timestamp, and SHA-256 digests of the input and output PDFs — an integrity-checkable audit trail for FOIA/HIPAA workflows. (The manifest is a plain JSON object; sign or seal it yourself if you need tamper-evidence.)
 
@@ -308,8 +320,8 @@ The manifest (when requested) records, per region, the page, bounding box, `reda
 - **`verify()` is itself best-effort and can fail *open*.** It re-extracts text and detects filled bars with `pdfjs`; if a page can't be parsed it reports **no** violations, so `clean === true` can mean "nothing left to recover" *or* "this page couldn't be analysed". Don't treat a clean result on an unusual/unparseable file as proof on its own — combine it with an out-of-band check (e.g. confirm `pdftotext` of the region is empty) for the highest-stakes documents.
 - **The redacted string may persist outside the page content.** Redaction targets the visible text layer. Values can also live in PDF **form fields (AcroForm)**, **bookmarks/named destinations**, **embedded files**, or **prior incremental-update revisions**; these are not scrubbed. Re-save through a linearising/sanitising step, or strip those structures, if they might carry the sensitive value.
 - **Region matching is heuristic.** Text position is estimated from `Tm`/`Td` operators with a small margin and assumes scale ≈ 1 / no rotation. Heavily transformed, rotated, or vector-outlined text may not be matched precisely.
-- **Only the text layer is touched.** Text rendered as part of an embedded **image** (a scanned page, a screenshot) is covered by the bar but not removed — there is no OCR layer to strip. For scanned documents, rasterise-and-replace is the safer approach.
-- **No image or vector-content redaction.** Redaction targets text. Logos, photos, and drawings under a bar are hidden visually but remain in the file.
+- **Only the text layer is touched — but scanned pages are now flagged.** Text rendered as part of an embedded **image** (a scanned page, a screenshot) is covered by the bar but not removed — there is no OCR layer to strip. `pdf-redact` detects this: `redact()` returns a `scanned-page`/`visual-only-region` **warning** and `verify()` returns a `scanned-page` warning instead of a false `clean`. Treat those warnings as "not redacted" — for scanned documents, rasterise-and-replace is the safer approach.
+- **No image or vector-content redaction.** Redaction targets text. Logos, photos, and drawings under a bar are hidden visually but remain in the file. Regions over such content raise a `visual-only-region` warning so the caller isn't misled by a green result.
 - **Synthetic data only in examples.** The sample document and patterns above use fake, non-real identifiers.
 
 For anything where exposure is unacceptable, redact → `verify()` → reject any output that isn't `clean`, and keep the original out of the same delivery path.

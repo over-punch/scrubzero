@@ -6,7 +6,7 @@ import { useState, useRef, useCallback, type DragEvent, type FormEvent } from "r
 type State =
 	| { status: "idle" }
 	| { status: "loading" }
-	| { status: "done"; redactedCount: number; pagesAffected: number[]; blob: Blob; filename: string }
+	| { status: "done"; redactedCount: number; pagesAffected: number[]; blob: Blob; filename: string; scanned: boolean; warnings: string[] }
 	| { status: "error"; message: string }
 
 export default function RedactDemo() {
@@ -49,7 +49,7 @@ export default function RedactDemo() {
 		setState({ status: "loading" })
 		try {
 			const res = await fetch("/api/redact", { method: "POST", body: form })
-			const data = await res.json() as { pdf?: string; redactedCount?: number; pagesAffected?: number[]; error?: string }
+			const data = await res.json() as { pdf?: string; redactedCount?: number; pagesAffected?: number[]; scanned?: boolean; warnings?: string[]; error?: string }
 			if (!res.ok || data.error) {
 				setState({ status: "error", message: data.error ?? "Redaction failed" })
 			} else {
@@ -61,6 +61,8 @@ export default function RedactDemo() {
 					pagesAffected: data.pagesAffected ?? [],
 					blob,
 					filename: file.name.replace(/\.pdf$/i, "-redacted.pdf"),
+					scanned: data.scanned ?? false,
+					warnings: data.warnings ?? [],
 				})
 			}
 		} catch {
@@ -190,6 +192,19 @@ export default function RedactDemo() {
 							)}
 						</p>
 					</div>
+
+					{/* Honest caution: a bar over a scan or image removes nothing. */}
+					{state.warnings.length > 0 && (
+						<div className="alert rounded px-4 py-3 flex flex-col gap-2" data-tone="warn">
+							<p className="text-xs font-medium" style={{ letterSpacing: "0.04em" }}>
+								⚠ Not everything was removed
+							</p>
+							{state.warnings.map((w, i) => (
+								<p key={i} className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>{w}</p>
+							))}
+						</div>
+					)}
+
 					<button
 						type="button"
 						onClick={downloadResult}

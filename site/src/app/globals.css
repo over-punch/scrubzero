@@ -27,6 +27,8 @@ html[data-mode="redact"] {
 	--verdict-pass: #2f6b45;
 	--danger: #a02a1e;
 	--danger-bg: rgba(160, 42, 30, 0.08);
+	--warn: #8a5a12;
+	--warn-bg: rgba(176, 120, 30, 0.1);
 }
 
 /* CHECK mode — the inverted, dark mirror. */
@@ -52,4 +54,6 @@ html[data-mode="check"] {
 	--verdict-pass: #5fbd85;
 	--danger: #e0564a;
 	--danger-bg: rgba(224, 86, 74, 0.1);
+	--warn: #e0b458;
+	--warn-bg: rgba(224, 180, 88, 0.12);
 }

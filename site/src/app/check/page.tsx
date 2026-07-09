@@ -6,6 +6,7 @@ import CodeBlock from "@/components/CodeBlock"
 import CopyInstall from "@/components/CopyInstall"
 import { ThemeMode } from "@/components/ThemeMode"
 import { ModeToggle } from "@/components/ModeToggle"
+import { PrivacyNote } from "@/components/PrivacyNote"
 import { version } from "../../../package.json"
 
 export const maxDuration = 60
@@ -81,6 +82,7 @@ export default function Check() {
 					<div className="mt-2 mono-label" style={{ color: "var(--ink-faint)", letterSpacing: "0.1em" }}>
 						SHA-256 · input a4f2‥e19 → output a4f2‥e19 · identical — the bar changed nothing underneath
 					</div>
+					<PrivacyNote />
 				</header>
 
 				{/* ── Hero ─────────────────────────────────────────────────── */}

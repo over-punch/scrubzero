@@ -5,6 +5,7 @@ import type {
 	RedactionRegion,
 	RedactOptions,
 	RedactResult,
+	RedactWarning,
 	NormalizedRegion,
 	TextItem,
 	RedactionManifest,
@@ -71,14 +72,53 @@ function textItemIntersectsRegion(item: TextItem, region: NormalizedRegion): boo
 	);
 }
 
+/** Text items grouped by page, plus the set of pages that draw a raster image. */
+interface PageContent {
+	/** 1-indexed page number → non-empty text items on that page */
+	textItemsByPage: Map<number, TextItem[]>;
+	/** 1-indexed page numbers that paint at least one image XObject */
+	imagePages: Set<number>;
+}
+
 /**
- * Extract all text items with page positions from a PDF using pdfjs-dist.
- * Returns items grouped by 1-indexed page number.
- * Text item transforms from pdfjs are in PDF bottom-left coordinate space.
+ * Determine whether a page's operator list paints any raster image.
+ * A scanned document draws its content as image XObjects with no text operators,
+ * which is exactly the case where a redaction bar covers pixels it cannot remove.
  */
-async function extractTextItems(pdfBytes: ArrayBuffer): Promise<Map<number, TextItem[]>> {
+function opListPaintsImage(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	opList: { fnArray: number[] },
+	OPS: Record<string, number> | undefined,
+): boolean {
+	if (!OPS) return false;
+	const imageOps = new Set<number>(
+		[
+			OPS['paintImageXObject'],
+			OPS['paintImageXObjectRepeat'],
+			OPS['paintInlineImageXObject'],
+			OPS['paintInlineImageXObjectGroup'],
+			OPS['paintImageMaskXObject'],
+			OPS['paintImageMaskXObjectGroup'],
+			OPS['paintImageMaskXObjectRepeat'],
+			OPS['paintJpegXObject'],
+			OPS['paintSolidColorImageMask'],
+		].filter((n): n is number => typeof n === 'number'),
+	);
+	for (const fn of opList.fnArray) {
+		if (imageOps.has(fn)) return true;
+	}
+	return false;
+}
+
+/**
+ * Extract all text items with page positions from a PDF using pdfjs-dist, and
+ * record which pages paint a raster image. Text item transforms from pdfjs are
+ * in PDF bottom-left coordinate space.
+ */
+async function extractTextItems(pdfBytes: ArrayBuffer): Promise<PageContent> {
 	// Use the legacy build which works in Node.js without a bundler
 	const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+	const OPS = (pdfjsLib as unknown as { OPS?: Record<string, number> }).OPS;
 
 	// Copy the buffer before passing to pdfjs — pdfjs may transfer (neuter) the source buffer
 	const loadingTask = pdfjsLib.getDocument({
@@ -91,7 +131,8 @@ async function extractTextItems(pdfBytes: ArrayBuffer): Promise<Map<number, Text
 
 	const pdfDoc = await loadingTask.promise;
 	const numPages = pdfDoc.numPages;
-	const result = new Map<number, TextItem[]>();
+	const textItemsByPage = new Map<number, TextItem[]>();
+	const imagePages = new Set<number>();
 
 	for (let pageNum = 1; pageNum <= numPages; pageNum++) {
 		const page = await pdfDoc.getPage(pageNum);
@@ -121,12 +162,21 @@ async function extractTextItems(pdfBytes: ArrayBuffer): Promise<Map<number, Text
 			});
 		}
 
-		result.set(pageNum, items);
+		textItemsByPage.set(pageNum, items);
+
+		// Detect raster imagery on the page (scanned content lives here, not in text)
+		try {
+			const opList = await page.getOperatorList();
+			if (opListPaintsImage(opList, OPS)) imagePages.add(pageNum);
+		} catch {
+			// Operator-list inspection is best-effort; absence of a signal is safe.
+		}
+
 		page.cleanup();
 	}
 
 	await pdfDoc.destroy();
-	return result;
+	return { textItemsByPage, imagePages };
 }
 
 /**
@@ -271,15 +321,16 @@ export async function redact(
 		// Nothing to redact — return original bytes
 		const pdfLibDoc = await PDFDocument.load(pdf);
 		const outBytes = await pdfLibDoc.save();
-		return { pdf: outBytes, redactedCount: 0, pagesAffected: [] };
+		return { pdf: outBytes, redactedCount: 0, pagesAffected: [], warnings: [] };
 	}
 
 	// Compute SHA-256 of input for manifest (computed even if manifest not requested, for efficiency we gate it)
 	const sha256Input = opts.generateManifest ? await sha256Hex(pdf) : '';
 	const nowIso = new Date().toISOString();
 
-	// Step 1: Extract text positions from original PDF
-	const textItemsByPage = await extractTextItems(pdf);
+	// Step 1: Extract text positions and image-bearing pages from original PDF
+	const { textItemsByPage, imagePages } = await extractTextItems(pdf);
+	const warnings: RedactWarning[] = [];
 
 	// Step 2: Load with pdf-lib for modification
 	const pdfLibDoc = await PDFDocument.load(pdf, {
@@ -325,6 +376,28 @@ export async function redact(
 
 		if (regionsWithText.length > 0) {
 			await scrubContentStream(pdfLibDoc, pageIndex, regionsWithText);
+		}
+
+		// Any region with no underlying text got only a visual bar — nothing was
+		// removed from the file. On an image-bearing page that means the pixels
+		// beneath the bar remain recoverable, so surface it as a warning.
+		const pageHasImage = imagePages.has(pageNum);
+		const visualOnlyCount = normalizedRegions.length - regionsWithText.length;
+		if (pageHasImage && textItems.length === 0) {
+			warnings.push({
+				type: 'scanned-page',
+				page: pageNum,
+				message: `Page ${pageNum} appears to be a scanned image with no extractable text. The redaction bar is drawn on top of the image but the original pixels are NOT removed and remain fully recoverable. To redact a scanned page you must flatten or rasterise the page after covering it.`,
+			});
+		} else if (visualOnlyCount > 0 && (pageHasImage || textItems.length === 0)) {
+			// Only warn where non-text content is plausibly hidden: an image-bearing
+			// page, or a page with no extractable text at all (e.g. vector graphics).
+			// A bar over a blank part of an ordinary text page is not flagged.
+			warnings.push({
+				type: 'visual-only-region',
+				page: pageNum,
+				message: `${visualOnlyCount} region${visualOnlyCount === 1 ? '' : 's'} on page ${pageNum} had no removable text underneath. ${pageHasImage ? 'This page contains a raster image — if a bar covers image content, those pixels are not removed and remain recoverable.' : 'The bar covers the area visually but nothing was removed from the file; any non-text (image or vector) content there is still recoverable.'}`,
+			});
 		}
 
 		// Step 4: Draw visual redaction bars for all regions
@@ -416,6 +489,7 @@ export async function redact(
 		pdf: outBytes,
 		redactedCount,
 		pagesAffected: sortedPages,
+		warnings,
 	};
 	if (manifest !== undefined) {
 		result.manifest = manifest;

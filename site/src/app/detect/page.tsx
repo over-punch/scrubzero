@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import DetectDemo from "@/components/DetectDemo"
 import { ThemeMode } from "@/components/ThemeMode"
 import { ModeToggle } from "@/components/ModeToggle"
+import { PrivacyNote } from "@/components/PrivacyNote"
 import { version } from "../../../package.json"
 
 export const maxDuration = 60
@@ -60,6 +61,7 @@ export default function Detect() {
 					<span>Regex tier · free</span>
 					<span>AI tier · your key</span>
 				</div>
+				<PrivacyNote ai />
 			</header>
 
 			{/* ── Hero ─────────────────────────────────────────────────── */}

@@ -24,6 +24,23 @@ async function pdfWithText(): Promise<{ pdf: ArrayBuffer; pageHeight: number; te
 	return { pdf: bytes.buffer.slice(0) as ArrayBuffer, pageHeight, textY: 400 };
 }
 
+/** A 1×1 red PNG — the smallest valid raster image, embedded to simulate a scan. */
+const RED_PIXEL_PNG = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+	'base64',
+);
+
+/** PDF whose entire page is a raster image and has no extractable text (a "scan"). */
+async function pdfScannedPage(): Promise<ArrayBuffer> {
+	const doc = await PDFDocument.create();
+	const page = doc.addPage([612, 792]);
+	const img = await doc.embedPng(RED_PIXEL_PNG);
+	// Scale the 1×1 image to cover the whole page — a rasterised document page.
+	page.drawImage(img, { x: 0, y: 0, width: 612, height: 792 });
+	const bytes = await doc.save();
+	return bytes.buffer.slice(0) as ArrayBuffer;
+}
+
 describe('redact', () => {
 	it('returns redactedCount 0 and a valid PDF when regions array is empty', async () => {
 		const pdf = await emptyPdf();
@@ -120,5 +137,30 @@ describe('redact', () => {
 		]);
 		expect(result.redactedCount).toBe(1);
 		expect(result.pdf).toBeInstanceOf(Uint8Array);
+	});
+
+	it('always returns a warnings array', async () => {
+		const pdf = await emptyPdf();
+		const result = await redact(pdf, []);
+		expect(Array.isArray(result.warnings)).toBe(true);
+		expect(result.warnings).toHaveLength(0);
+	});
+
+	it('warns that a bar over a scanned (image-only) page removes nothing', async () => {
+		const pdf = await pdfScannedPage();
+		const result = await redact(pdf, [{ page: 1, x: 50, y: 100, width: 300, height: 40 }]);
+		// The bar is drawn, but the image pixels underneath are untouched.
+		expect(result.redactedCount).toBe(1);
+		expect(result.warnings.length).toBeGreaterThan(0);
+		expect(result.warnings.some((w) => w.type === 'scanned-page' && w.page === 1)).toBe(true);
+	});
+
+	it('does not warn when a bar covers real text that gets scrubbed', async () => {
+		const { pdf, pageHeight, textY } = await pdfWithText();
+		const topLeftY = pageHeight - textY - 12;
+		const result = await redact(pdf, [
+			{ page: 1, x: 95, y: topLeftY - 2, width: 230, height: 20 },
+		]);
+		expect(result.warnings).toHaveLength(0);
 	});
 });

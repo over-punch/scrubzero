@@ -104,6 +104,21 @@ export interface RedactionManifest {
 }
 
 /**
+ * A non-fatal caution raised during redaction. The most important case is a
+ * region drawn over content that has no removable text underneath — a scanned
+ * page or an image/vector graphic. There, the bar only *covers* the content
+ * visually; the original pixels remain in the file and are fully recoverable.
+ */
+export interface RedactWarning {
+	/** Machine-readable warning kind */
+	type: 'visual-only-region' | 'scanned-page';
+	/** 1-indexed page number the warning applies to */
+	page: number;
+	/** Human-readable explanation, safe to surface directly to a user */
+	message: string;
+}
+
+/**
  * The result returned by redact() and searchAndRedact().
  */
 export interface RedactResult {
@@ -113,6 +128,12 @@ export interface RedactResult {
 	redactedCount: number;
 	/** Sorted list of 1-indexed page numbers that had at least one redaction */
 	pagesAffected: number[];
+	/**
+	 * Cautions where a redaction bar was drawn but no underlying text was
+	 * removed (image/scanned/vector content stays recoverable). Empty when every
+	 * redacted region had text that was scrubbed from the content stream.
+	 */
+	warnings: RedactWarning[];
 	/** Structured redaction manifest for audit and compliance purposes */
 	manifest?: RedactionManifest;
 }

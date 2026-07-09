@@ -231,7 +231,7 @@ export async function searchAndRedact(
 		const { PDFDocument } = await import('pdf-lib');
 		const pdfLibDoc = await PDFDocument.load(pdf);
 		const outBytes = await pdfLibDoc.save();
-		return { pdf: outBytes, redactedCount: 0, pagesAffected: [] };
+		return { pdf: outBytes, redactedCount: 0, pagesAffected: [], warnings: [] };
 	}
 
 	// Single pdfjs pass: extract text items and page heights together

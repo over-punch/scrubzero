@@ -5,9 +5,18 @@ import { program } from 'commander';
 import { readFile, writeFile } from 'fs/promises';
 import { redact, searchAndRedact, redactEntities, verify } from './index.js';
 import type { EntityType } from './entity-patterns.js';
-import type { RedactionRegion } from './types.js';
+import type { RedactionRegion, RedactWarning } from './types.js';
 
-const pkg = { version: '0.1.0' };
+/** Print redaction warnings (e.g. bars over scanned/image content) to stderr. */
+function printWarnings(warnings: RedactWarning[]): void {
+	if (warnings.length === 0) return;
+	console.warn(`\n⚠ ${warnings.length} warning(s) — content may still be recoverable:`);
+	for (const w of warnings) {
+		console.warn(`  [page ${w.page}] ${w.message}`);
+	}
+}
+
+const pkg = { version: '0.2.0' };
 
 program
 	.name('pdf-redact')
@@ -61,10 +70,11 @@ program
 		await writeFile(opts.output, result.pdf);
 
 		if (opts.json) {
-			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, output: opts.output }, null, 2));
+			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output }, null, 2));
 		} else {
 			console.log(`Redacted ${result.redactedCount} region(s) across ${result.pagesAffected.length} page(s)`);
 			console.log(`Wrote: ${opts.output}`);
+			printWarnings(result.warnings);
 		}
 	});
 
@@ -112,11 +122,12 @@ program
 		await writeFile(opts.output, result.pdf);
 
 		if (opts.json) {
-			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, output: opts.output }, null, 2));
+			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output }, null, 2));
 		} else {
 			console.log(`Redacted ${result.redactedCount} entity match(es) across ${result.pagesAffected.length} page(s)`);
 			console.log(`Types: ${types.join(', ')}`);
 			console.log(`Wrote: ${opts.output}`);
+			printWarnings(result.warnings);
 		}
 	});
 
@@ -145,7 +156,8 @@ program
 
 		if (opts.json) {
 			console.log(JSON.stringify(result, null, 2));
-			process.exit(result.clean ? 0 : 1);
+			// Not verifiable (warnings) is a failure too, for scripting/CI use.
+			process.exit(result.clean && result.warnings.length === 0 ? 0 : 1);
 		}
 
 		if (result.clean) {
@@ -156,8 +168,20 @@ program
 				const pageStr = v.page ? ` [page ${v.page}]` : '';
 				console.log(`  ${pageStr} recovered: "${v.recoveredText.slice(0, 80)}"`);
 			}
-			process.exit(1);
 		}
+
+		// Warnings apply whether or not the text check passed — a scanned page can
+		// pass the text check while its image content is still fully recoverable.
+		if (result.warnings.length > 0) {
+			console.log(`\n⚠ ${result.warnings.length} warning(s) — the text check cannot see image content:`);
+			for (const w of result.warnings) {
+				console.log(`  [page ${w.page}] ${w.message}`);
+			}
+			console.log('\nThis PDF is NOT verifiably clean. Check the flagged pages manually.');
+		}
+
+		// Exit non-zero if the document is either dirty or not verifiable.
+		if (!result.clean || result.warnings.length > 0) process.exit(1);
 	});
 
 // ─── redact (coordinate-based) ───────────────────────────────────────────────
@@ -217,10 +241,11 @@ program
 		}
 
 		if (opts.json) {
-			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, output: opts.output }, null, 2));
+			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output }, null, 2));
 		} else {
 			console.log(`Redacted ${result.redactedCount} region(s) across ${result.pagesAffected.length} page(s)`);
 			console.log(`Wrote: ${opts.output}`);
+			printWarnings(result.warnings);
 		}
 	});
 

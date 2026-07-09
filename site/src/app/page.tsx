@@ -4,6 +4,7 @@ import CodeBlock from "@/components/CodeBlock"
 import CopyInstall from "@/components/CopyInstall"
 import { ThemeMode } from "@/components/ThemeMode"
 import { ModeToggle } from "@/components/ModeToggle"
+import { PrivacyNote } from "@/components/PrivacyNote"
 import { version } from "../../package.json"
 
 export const maxDuration = 60
@@ -45,9 +46,7 @@ export default function Home() {
 					<span>Node.js / Lambda</span>
 					<span>Zero-dependency core</span>
 				</div>
-				<div className="mt-2 mono-label" style={{ color: "var(--ink-faint)", letterSpacing: "0.1em" }}>
-					SHA-256 · input a4f2‥e19 → output 9f8e‥7d · verified
-				</div>
+				<PrivacyNote />
 			</header>
 
 			{/* ── Hero ─────────────────────────────────────────────────── */}
@@ -119,6 +118,7 @@ export default function Home() {
 						{ n: "02", label: "Visual bar overlay", body: "After scrubbing, pdf-lib draws a filled rectangle over the region using the specified color (default black). The bar is a genuine visual layer on top of now-empty space — there is no text underneath to recover." },
 						{ n: "03", label: "Metadata sanitization", body: "DocInfo fields (Title, Author, Subject, Keywords, Producer, Creator) are wiped and timestamps reset. The XMP metadata stream is removed from the document catalog. Enabled by default, disable with sanitizeMetadata: false." },
 						{ n: "04", label: "Audit manifest", body: "When generateManifest: true, each redaction entry is recorded with page number, bounding box, timestamp, optional redactor ID, basis code, and SHA-256 hashes of both the input and output PDF for chain-of-custody compliance." },
+						{ n: "05", label: "Scanned pages are flagged, not faked", body: "Redaction works on the text layer. A scanned or image-only page has no text to remove, so a bar there only covers the pixels — it does not delete them. scrubzero detects this and returns a warning (shown above the download) instead of a false all-clear. To truly redact a scan, OCR or rasterise-and-replace the page first." },
 					].map(({ n, label, body }) => (
 						<div key={n} className="py-6 flex flex-col gap-2">
 							<div className="flex items-baseline gap-4">

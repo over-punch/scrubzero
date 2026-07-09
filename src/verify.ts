@@ -13,13 +13,37 @@ export interface VerificationViolation {
 }
 
 /**
+ * A caution that verify() cannot rule out recoverable content by inspecting text
+ * alone. Raster imagery is opaque to text extraction, so a scanned page — or a
+ * bar drawn over an image — can pass the text check while the sensitive content
+ * survives in the image pixels. Treat any warning as "not verifiably clean".
+ */
+export interface VerificationWarning {
+	/** Machine-readable warning kind */
+	type: 'image-under-redaction' | 'scanned-page';
+	/** 1-indexed page number the warning applies to */
+	page: number;
+	/** Human-readable explanation, safe to surface directly to a user */
+	message: string;
+}
+
+/**
  * The result of verifying a redacted PDF.
  */
 export interface VerificationResult {
-	/** True if no text was found under any redaction bar */
+	/**
+	 * True if no recoverable **text** was found under any redaction bar. This
+	 * covers the text layer only — a `clean: true` result with a non-empty
+	 * `warnings` array is NOT a guarantee the document is safe (see `warnings`).
+	 */
 	clean: boolean;
 	/** Regions where text was found under a redaction bar */
 	violations: VerificationViolation[];
+	/**
+	 * Cases the text check cannot see through — scanned pages and bars over
+	 * raster images, where content may remain recoverable in the image pixels.
+	 */
+	warnings: VerificationWarning[];
 }
 
 /** Minimum fill opacity to treat a rectangle as a redaction bar (0–1 scale) */
@@ -52,21 +76,45 @@ function rectsOverlap(a: Rect, b: Rect): boolean {
 }
 
 /**
+ * Determine whether an operator list paints any raster image. Scanned pages draw
+ * their content as image XObjects, which text extraction cannot see through.
+ */
+function opListPaintsImage(
+	fnArray: number[],
+	OPS: Record<string, number> | undefined,
+): boolean {
+	if (!OPS) return false;
+	const imageOps = new Set<number>(
+		[
+			OPS['paintImageXObject'],
+			OPS['paintImageXObjectRepeat'],
+			OPS['paintInlineImageXObject'],
+			OPS['paintInlineImageXObjectGroup'],
+			OPS['paintImageMaskXObject'],
+			OPS['paintImageMaskXObjectGroup'],
+			OPS['paintImageMaskXObjectRepeat'],
+			OPS['paintJpegXObject'],
+			OPS['paintSolidColorImageMask'],
+		].filter((n): n is number => typeof n === 'number'),
+	);
+	for (const fn of fnArray) {
+		if (imageOps.has(fn)) return true;
+	}
+	return false;
+}
+
+/**
  * Extract filled rectangles from a page's operator list.
  * Uses the OPS.rectangle and OPS.fill / OPS.closeFillStroke / OPS.fillStroke operations.
  */
-async function extractFilledRects(
+function extractFilledRects(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	page: any,
-): Promise<Rect[]> {
+	opList: { fnArray: number[]; argsArray: any[][] },
+	OPS: Record<string, number> | undefined,
+): Rect[] {
 	const rects: Rect[] = [];
 
 	try {
-		const opList = await page.getOperatorList();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs' as any);
-		const OPS = pdfjsLib.OPS as Record<string, number> | undefined;
-
 		if (!OPS) return rects;
 
 		const fnArray: number[] = opList.fnArray as number[];
@@ -165,27 +213,32 @@ export async function verify(pdf: ArrayBuffer): Promise<VerificationResult> {
 		disableFontFace: true,
 	});
 
+	const OPS = (pdfjsLib as unknown as { OPS?: Record<string, number> }).OPS;
 	const pdfDoc = await loadingTask.promise;
 	const numPages = pdfDoc.numPages;
 	const violations: VerificationViolation[] = [];
+	const warnings: VerificationWarning[] = [];
 
 	for (let pageNum = 1; pageNum <= numPages; pageNum++) {
 		const page = await pdfDoc.getPage(pageNum);
 
-		// Extract filled rectangles (potential redaction bars)
-		const filledRects = await extractFilledRects(page);
+		// Fetch the operator list once and derive both the redaction bars and
+		// whether the page paints any raster image (opaque to text extraction).
+		const opList = await page.getOperatorList();
+		const filledRects = extractFilledRects(opList, OPS);
+		const hasImage = opListPaintsImage(opList.fnArray as number[], OPS);
 
-		if (filledRects.length === 0) {
-			page.cleanup();
-			continue;
-		}
-
-		// Extract text items and their bounding boxes
+		// Extract text items and their bounding boxes, counting non-empty items.
 		const textContent = await page.getTextContent();
+		let textItemCount = 0;
 
 		for (const item of textContent.items) {
 			if (!('str' in item)) continue;
 			if (!item.str || item.str.trim() === '') continue;
+			textItemCount++;
+
+			// A bar is required to attribute the text to a redaction violation.
+			if (filledRects.length === 0) continue;
 
 			// item.transform[4] = x, item.transform[5] = y in PDF bottom-left space
 			const [, , , , tx, ty] = item.transform;
@@ -214,6 +267,24 @@ export async function verify(pdf: ArrayBuffer): Promise<VerificationResult> {
 			}
 		}
 
+		// Raster imagery is opaque to the text check, so it can never confirm a
+		// scanned page is safe. A text-free image page is inherently unverifiable
+		// (warn regardless of bars); an image on a text page is only flagged when a
+		// bar is present, so ordinary logos and figures do not raise noise.
+		if (hasImage && textItemCount === 0) {
+			warnings.push({
+				type: 'scanned-page',
+				page: pageNum,
+				message: `Page ${pageNum} is a scanned image with no extractable text. verify() checks the text layer only and cannot confirm the image content was removed — if a redaction bar was drawn over the image, the original pixels are likely still recoverable.`,
+			});
+		} else if (hasImage && filledRects.length > 0) {
+			warnings.push({
+				type: 'image-under-redaction',
+				page: pageNum,
+				message: `Page ${pageNum} contains a raster image beneath a redaction bar. The text check passed, but any sensitive content that lives in the image pixels (not the text layer) cannot be verified as removed.`,
+			});
+		}
+
 		page.cleanup();
 	}
 
@@ -222,5 +293,6 @@ export async function verify(pdf: ArrayBuffer): Promise<VerificationResult> {
 	return {
 		clean: violations.length === 0,
 		violations,
+		warnings,
 	};
 }

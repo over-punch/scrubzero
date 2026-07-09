@@ -85,7 +85,7 @@ export async function redactEntities(
 		const { PDFDocument } = await import('pdf-lib');
 		const pdfLibDoc = await PDFDocument.load(pdf);
 		const outBytes = await pdfLibDoc.save();
-		return { pdf: outBytes, redactedCount: 0, pagesAffected: [] };
+		return { pdf: outBytes, redactedCount: 0, pagesAffected: [], warnings: [] };
 	}
 
 	// Build a fresh copy of each pattern (regex flags include 'g' which is stateful)

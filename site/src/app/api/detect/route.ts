@@ -86,6 +86,11 @@ export async function POST(req: NextRequest) {
 		const data = new Uint8Array(await file.arrayBuffer())
 		const pages = await extractPages(data)
 
+		// A scan has no extractable text, so regex/AI detection can't see its
+		// contents. Flag it so the UI can warn rather than reporting "0 findings".
+		const textChars = pages.join("").replace(/\s/g, "").length
+		const scanned = textChars < 24
+
 		const { EntityPatterns } = await import("@liiift-studio/pdf-redact")
 		const findings: Finding[] = []
 
@@ -132,6 +137,7 @@ export async function POST(req: NextRequest) {
 			findings,
 			pageCount: pages.length,
 			aiUsed,
+			scanned,
 			total: findings.reduce((s, f) => s + f.count, 0),
 		})
 	} catch (err) {

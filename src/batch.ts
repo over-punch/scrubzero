@@ -85,6 +85,7 @@ async function processItem(item: BatchItem): Promise<RedactResult> {
 			pdf: regionResult.pdf,
 			redactedCount: patternResult.redactedCount + regionResult.redactedCount,
 			pagesAffected: allPages,
+			warnings: [...patternResult.warnings, ...regionResult.warnings],
 		};
 	}
 
