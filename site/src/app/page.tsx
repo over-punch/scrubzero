@@ -1,5 +1,6 @@
 // scrubzero — REDACT mode (light). Toggle to /check for the audit mirror.
 import RedactDemo from "@/components/RedactDemo"
+import OcrRedactDemo from "@/components/OcrRedactDemo"
 import CodeBlock from "@/components/CodeBlock"
 import CopyInstall from "@/components/CopyInstall"
 import { ThemeMode } from "@/components/ThemeMode"
@@ -109,16 +110,29 @@ export default function Home() {
 
 			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
 
+			{/* ── Scanned PDFs (in-browser OCR redaction) ──────────────── */}
+			<section className="mb-20">
+				<SectionLabel n="02">Scanned PDFs</SectionLabel>
+				<p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
+					A scan is an image — a bar drawn over it removes nothing. This tool OCRs the pages, burns opaque boxes
+					into the pixels, and rebuilds the PDF from the flattened images, so the original content is destroyed.
+					It runs <em style={{ fontStyle: "normal", color: "var(--foreground)" }}>entirely in your browser</em> — the file never leaves your device.
+				</p>
+				<OcrRedactDemo />
+			</section>
+
+			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
+
 			{/* ── How it works ─────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel n="02">How it works</SectionLabel>
+				<SectionLabel n="03">How it works</SectionLabel>
 				<div className="flex flex-col divide-y" style={{ borderColor: "var(--rule)" }}>
 					{[
 						{ n: "01", label: "Content stream scrubbing", body: "pdfjs-dist extracts text items with positions. For each match, scrubzero locates the BT/ET block in the raw content stream bytes, finds the text-drawing operators, and blanks their string arguments. The glyph data is gone before the bar is drawn." },
 						{ n: "02", label: "Visual bar overlay", body: "After scrubbing, pdf-lib draws a filled rectangle over the region using the specified color (default black). The bar is a genuine visual layer on top of now-empty space — there is no text underneath to recover." },
 						{ n: "03", label: "Metadata sanitization", body: "DocInfo fields (Title, Author, Subject, Keywords, Producer, Creator) are wiped and timestamps reset. The XMP metadata stream is removed from the document catalog. Enabled by default, disable with sanitizeMetadata: false." },
 						{ n: "04", label: "Audit manifest", body: "When generateManifest: true, each redaction entry is recorded with page number, bounding box, timestamp, optional redactor ID, basis code, and SHA-256 hashes of both the input and output PDF for chain-of-custody compliance." },
-						{ n: "05", label: "Scanned pages are flagged, not faked", body: "Redaction works on the text layer. A scanned or image-only page has no text to remove, so a bar there only covers the pixels — it does not delete them. scrubzero detects this and returns a warning (shown above the download) instead of a false all-clear. To truly redact a scan, OCR or rasterise-and-replace the page first." },
+						{ n: "05", label: "Scanned pages are flagged, then handled", body: "Redaction works on the text layer. A scanned or image-only page has no text to remove, so a bar there only covers the pixels — it does not delete them. scrubzero detects this and returns a warning instead of a false all-clear, then the Scanned PDFs tool above OCRs the page, burns the boxes into the pixels, and rebuilds the file from flattened images — all in your browser, so the scan never leaves your device." },
 					].map(({ n, label, body }) => (
 						<div key={n} className="py-6 flex flex-col gap-2">
 							<div className="flex items-baseline gap-4">
@@ -135,7 +149,7 @@ export default function Home() {
 
 			{/* ── Usage ────────────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel n="03">Usage</SectionLabel>
+				<SectionLabel n="04">Usage</SectionLabel>
 				<div className="flex flex-col gap-10">
 					<div className="flex flex-col gap-3">
 						<p className="mono-label">Search and redact by text pattern</p>

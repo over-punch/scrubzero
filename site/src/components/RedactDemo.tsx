@@ -3,10 +3,13 @@
 
 import { useState, useRef, useCallback, type DragEvent, type FormEvent } from "react"
 
+// Result of re-verifying our own output — the "prove the negative" self-check.
+type Verified = { clean: boolean; violations: number; recovered: string[]; warnings: string[] }
+
 type State =
 	| { status: "idle" }
 	| { status: "loading" }
-	| { status: "done"; redactedCount: number; pagesAffected: number[]; blob: Blob; filename: string; scanned: boolean; warnings: string[] }
+	| { status: "done"; redactedCount: number; pagesAffected: number[]; blob: Blob; filename: string; scanned: boolean; warnings: string[]; verified: Verified | null }
 	| { status: "error"; message: string }
 
 export default function RedactDemo() {
@@ -49,7 +52,7 @@ export default function RedactDemo() {
 		setState({ status: "loading" })
 		try {
 			const res = await fetch("/api/redact", { method: "POST", body: form })
-			const data = await res.json() as { pdf?: string; redactedCount?: number; pagesAffected?: number[]; scanned?: boolean; warnings?: string[]; error?: string }
+			const data = await res.json() as { pdf?: string; redactedCount?: number; pagesAffected?: number[]; scanned?: boolean; warnings?: string[]; verified?: Verified | null; error?: string }
 			if (!res.ok || data.error) {
 				setState({ status: "error", message: data.error ?? "Redaction failed" })
 			} else {
@@ -63,6 +66,7 @@ export default function RedactDemo() {
 					filename: file.name.replace(/\.pdf$/i, "-redacted.pdf"),
 					scanned: data.scanned ?? false,
 					warnings: data.warnings ?? [],
+					verified: data.verified ?? null,
 				})
 			}
 		} catch {
@@ -178,6 +182,27 @@ export default function RedactDemo() {
 			{/* Result */}
 			{state.status === "done" && (
 				<div className="panel flex flex-col gap-3 rounded px-5 py-4">
+					{/* Self-check verdict: the site re-runs verify() on its own output. */}
+					{(() => {
+						const v = state.verified
+						const failed = !!v && v.violations > 0
+						const caution = !failed && (state.warnings.length > 0 || (!!v && v.warnings.length > 0) || state.scanned)
+						const pass = !!v && v.clean && v.violations === 0 && !caution
+						const tone = failed ? "var(--danger)" : caution ? "var(--warn)" : pass ? "var(--verdict-pass)" : "var(--ink-dim)"
+						const label = failed ? "✗ Verification failed" : caution ? "◎ Not verifiably clean" : pass ? "✓ Verified — no recoverable text" : "Redaction complete"
+						const sub = failed
+							? `${v!.violations} text fragment${v!.violations !== 1 ? "s" : ""} still recoverable under a bar${v!.recovered.length ? ` — e.g. “${v!.recovered[0]}”` : ""}. The content-stream scrub missed here; do not rely on this output.`
+							: pass
+								? "Re-ran the auditor on the output: no text sits under any redaction bar."
+								: null
+						return (
+							<div className="flex flex-col gap-1">
+								<span className="text-xs font-medium" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.06em", color: tone }}>{label}</span>
+								{sub && <p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>{sub}</p>}
+							</div>
+						)
+					})()}
+
 					<div className="flex items-center gap-2">
 						<svg width="15" height="15" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-60">
 							<circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4"/>

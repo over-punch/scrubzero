@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 	}
 
 	try {
-		const { searchAndRedact } = await import("@liiift-studio/pdf-redact")
+		const { searchAndRedact, verify } = await import("@liiift-studio/pdf-redact")
 		const buffer = await file.arrayBuffer()
 
 		// Build the pattern list — either literal strings (Detect handoff) or a single search pattern.
@@ -110,8 +110,27 @@ export async function POST(req: NextRequest) {
 		const warnings = libWarnings.map((w) => w.message)
 		if (scanned) {
 			warnings.unshift(
-				"This PDF has little or no extractable text — it looks like a scan or image. Text and pattern redaction only remove the text layer, so nothing was removed from the image itself. The bar covers it on screen but the original pixels remain recoverable. Flatten or rasterise the page to truly redact a scan.",
+				"This PDF has little or no extractable text — it looks like a scan or image. Text and pattern redaction only remove the text layer, so nothing was removed from the image itself. The bar covers it on screen but the original pixels remain recoverable. Use the “Scanned PDFs” tool below to OCR and truly redact it in your browser.",
 			)
+		}
+
+		// Prove the negative: re-run the verifier against our OWN output and report
+		// what it finds. A green result on the site is now this check passing, not
+		// an assertion — text recovered under a bar means the scrub missed, and
+		// verify warnings mean the output isn't verifiably clean (e.g. a scan).
+		let verified: { clean: boolean; violations: number; recovered: string[]; warnings: string[] } | null = null
+		try {
+			const outAb = result.pdf.slice().buffer as ArrayBuffer
+			const v = await verify(outAb)
+			const vWarnings = (v as { warnings?: Array<{ message: string }> }).warnings ?? []
+			verified = {
+				clean: v.clean,
+				violations: v.violations.length,
+				recovered: v.violations.slice(0, 5).map((x) => x.recoveredText),
+				warnings: vWarnings.map((w) => w.message),
+			}
+		} catch {
+			verified = null // verification is best-effort; never block returning the PDF
 		}
 
 		// Encode the resulting PDF as base64 for transfer.
@@ -122,6 +141,7 @@ export async function POST(req: NextRequest) {
 			pagesAffected: result.pagesAffected,
 			scanned,
 			warnings,
+			verified,
 		})
 	} catch (err) {
 		console.error("pdf-redact error:", err)
