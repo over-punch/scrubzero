@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in pdf-redact behaves incorrectly (non-security)
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! **If the bug is that redacted content is still
+        recoverable, or `verify()` reported a false clean — that's a security issue.
+        Do not file it here; [report it privately](https://github.com/Liiift-Studio/pdf-redact/security/advisories/new) instead.**
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`@liiift-studio/pdf-redact` version (upgrade to latest first)"
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: How are you using it?
+      options:
+        - Library (redact / searchAndRedact / redactEntities)
+        - verify()
+        - CLI
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you observed vs. what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: |
+        Minimal code + a small **non-sensitive** PDF that reproduces it. Please do
+        NOT attach real personal data — synthesize a fixture.
+      render: javascript
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Node 20.x, macOS / AWS Lambda / …"
+    validations:
+      required: false

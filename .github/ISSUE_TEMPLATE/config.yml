@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Liiift-Studio/pdf-redact/security/advisories/new
+    about: Recoverable content after redaction, a verify() false clean, or any leak — report privately, not as a public issue.
+  - name: Question or discussion
+    url: https://github.com/Liiift-Studio/pdf-redact/discussions
+    about: Usage questions and open-ended ideas.

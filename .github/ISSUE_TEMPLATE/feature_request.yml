@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: The use case or pain point — not just the proposed solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you'd like pdf-redact to do. API sketch welcome.
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Fit with the project's constraints
+      description: pdf-redact stays small, auditable, and dependency-light (runs in Lambda, no native binaries).
+      options:
+        - label: This keeps the library dependency-light and Lambda-friendly (or I've noted why a new dependency is worth it)
+        - label: This is in scope for a focused redaction library (not a general PDF suite)

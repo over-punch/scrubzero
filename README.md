@@ -1,6 +1,7 @@
 # pdf-redact
 
 [![npm version](https://img.shields.io/npm/v/@liiift-studio/pdf-redact.svg)](https://www.npmjs.com/package/@liiift-studio/pdf-redact)
+[![npm downloads](https://img.shields.io/npm/dm/@liiift-studio/pdf-redact.svg)](https://www.npmjs.com/package/@liiift-studio/pdf-redact)
 [![CI](https://github.com/Liiift-Studio/pdf-redact/actions/workflows/ci.yml/badge.svg)](https://github.com/Liiift-Studio/pdf-redact/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/@liiift-studio/pdf-redact.svg)](#license)
 [![node](https://img.shields.io/node/v/@liiift-studio/pdf-redact.svg)](#nodejs-and-lambda-compatibility)
