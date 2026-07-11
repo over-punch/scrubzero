@@ -207,6 +207,16 @@ export default function AuditDemo() {
 								<span className="ml-2 text-xs" style={{ color: "var(--ink-dim)" }}>this PDF may not be securely redacted</span>
 							</p>
 
+							{/* Check exposes the problem — the fix is Redact. Make that path obvious. */}
+							<a
+								href="/"
+								className="group self-start inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80"
+								style={{ background: "var(--btn-bg)", color: "var(--btn-fg)", fontFamily: "var(--font-mono)" }}
+							>
+								Redact it properly
+								<span className="transition-transform group-hover:translate-x-0.5">→</span>
+							</a>
+
 							{state.report.findings.map((f, i) => (
 								<div key={i} className="panel rounded px-4 py-3 flex flex-col gap-2">
 									<div className="flex items-center gap-2 flex-wrap">

@@ -20,13 +20,21 @@ export function RedactTransition({ children }: { children: React.ReactNode }) {
 	const pending = useRef<{ href: string; mode: "redact" | "check" } | null>(null)
 
 	const go = useCallback((href: string, mode: "redact" | "check", lbl: string) => {
+		// Accessibility: honour reduced-motion — skip the full-screen wipe entirely
+		// and flip theme + route instantly (no flash, no 508 blocker).
+		const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+		if (reduce) {
+			document.documentElement.dataset.mode = mode
+			router.push(href)
+			return
+		}
 		setPhase((p) => {
 			if (p !== "idle") return p
 			pending.current = { href, mode }
 			setLabel(lbl)
 			return "in"
 		})
-	}, [])
+	}, [router])
 
 	const onEnd = useCallback(() => {
 		setPhase((p) => {

@@ -211,6 +211,9 @@ button, [role="button"] { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
 	.redln--cover .redln__bar { animation: none; width: 100%; }
 	.redln--reveal .redln__bar { animation: none; width: 3rem; }
+	/* No animated theme flip and no full-screen wipe for reduced-motion users. */
+	body { transition: none; }
+	.wipe { display: none !important; }
 }
 
 /* ── Form controls (token-driven so the dark mirror inherits) ──────────*/
