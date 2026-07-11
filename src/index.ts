@@ -3,7 +3,7 @@
 export { redact } from './redact.js';
 export { searchAndRedact, redactWithPHIDetector } from './search-and-redact.js';
 export { redactBatch } from './batch.js';
-export { redactEntities, EntityPatterns } from './entity-patterns.js';
+export { redactEntities, EntityPatterns, DEFAULT_FOIA_EXEMPTIONS } from './entity-patterns.js';
 export { verify } from './verify.js';
 
 export type {

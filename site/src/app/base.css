@@ -106,7 +106,10 @@ button, [role="button"] { cursor: pointer; }
 	font-size: 11px;
 }
 .modetoggle a {
-	padding: 4px 13px;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 12px;
 	border-radius: 999px;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -114,6 +117,13 @@ button, [role="button"] { cursor: pointer; }
 	transition: color 0.2s ease, background 0.2s ease;
 }
 .modetoggle a:hover { color: var(--foreground); }
+/* Small step number that makes the 1 → 2 → 3 pipeline order legible. */
+.modetoggle__n {
+	font-size: 9px;
+	opacity: 0.45;
+	font-variant-numeric: tabular-nums;
+}
+.modetoggle a[data-active="true"] .modetoggle__n { opacity: 0.7; }
 .modetoggle a[data-active="true"] {
 	background: var(--btn-bg);
 	color: var(--btn-fg);

@@ -3,7 +3,7 @@
 
 import { program } from 'commander';
 import { readFile, writeFile } from 'fs/promises';
-import { redact, searchAndRedact, redactEntities, verify } from './index.js';
+import { redact, searchAndRedact, redactEntities, verify, DEFAULT_FOIA_EXEMPTIONS } from './index.js';
 import type { EntityType } from './entity-patterns.js';
 import type { RedactionRegion, RedactWarning } from './types.js';
 
@@ -16,7 +16,7 @@ function printWarnings(warnings: RedactWarning[]): void {
 	}
 }
 
-const pkg = { version: '0.2.0' };
+const pkg = { version: '0.3.0' };
 
 program
 	.name('pdf-redact')
@@ -31,8 +31,11 @@ program
 	.option('--output <file>', 'Output PDF file path', 'redacted.pdf')
 	.option('--color <hex>', 'Bar color as hex (e.g. #000000)', '#000000')
 	.option('--label <text>', 'Label rendered inside the bar (e.g. REDACTED)')
+	.option('--exemption <code>', 'Exemption code stamped on the bar and logged (e.g. "(b)(6)")')
+	.option('--redactor <id>', 'Operator ID recorded in the manifest')
+	.option('--manifest', 'Write a JSON audit manifest (redaction log) alongside the output')
 	.option('--json', 'Print a JSON summary instead of human-readable output')
-	.action(async (file: string, pattern: string, opts: { output: string; color: string; label?: string; json?: boolean }) => {
+	.action(async (file: string, pattern: string, opts: { output: string; color: string; label?: string; exemption?: string; redactor?: string; manifest?: boolean; json?: boolean }) => {
 		let pdfBuffer: Buffer;
 		try {
 			pdfBuffer = await readFile(file);
@@ -59,8 +62,17 @@ program
 		try {
 			result = await searchAndRedact(
 				pdfBuffer.buffer as ArrayBuffer,
-				[{ pattern: searchPattern, color, ...(opts.label ? { label: opts.label } : {}) }],
-				{ addRedactionMarkers: !!opts.label },
+				[{
+					pattern: searchPattern,
+					color,
+					...(opts.label ? { label: opts.label } : {}),
+					...(opts.exemption ? { exemptionCode: opts.exemption } : {}),
+				}],
+				{
+					addRedactionMarkers: !!opts.label || !!opts.exemption,
+					generateManifest: !!opts.manifest,
+					...(opts.redactor ? { redactorId: opts.redactor } : {}),
+				},
 			);
 		} catch (err) {
 			console.error(`Error: Redaction failed: ${String(err)}`);
@@ -69,11 +81,18 @@ program
 
 		await writeFile(opts.output, result.pdf);
 
+		let manifestPath: string | undefined;
+		if (opts.manifest && result.manifest) {
+			manifestPath = opts.output.replace(/\.pdf$/i, '.manifest.json');
+			await writeFile(manifestPath, JSON.stringify(result.manifest, null, 2));
+		}
+
 		if (opts.json) {
-			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output }, null, 2));
+			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output, manifest: manifestPath }, null, 2));
 		} else {
 			console.log(`Redacted ${result.redactedCount} region(s) across ${result.pagesAffected.length} page(s)`);
 			console.log(`Wrote: ${opts.output}`);
+			if (manifestPath) console.log(`Wrote manifest: ${manifestPath}`);
 			printWarnings(result.warnings);
 		}
 	});
@@ -89,8 +108,11 @@ program
 	.description(`Redact common entity types. Available: ${ENTITY_NAMES.join(', ')}`)
 	.option('--types <list>', 'Comma-separated entity types to redact (default: all)')
 	.option('--output <file>', 'Output PDF file path', 'redacted.pdf')
+	.option('--foia', 'Stamp default FOIA exemption codes ((b)(6) for PII, (b)(5) for privilege) and log them')
+	.option('--redactor <id>', 'Operator ID recorded in the manifest')
+	.option('--manifest', 'Write a JSON audit manifest (redaction log) alongside the output')
 	.option('--json', 'Print a JSON summary instead of human-readable output')
-	.action(async (file: string, opts: { types?: string; output: string; json?: boolean }) => {
+	.action(async (file: string, opts: { types?: string; output: string; foia?: boolean; redactor?: string; manifest?: boolean; json?: boolean }) => {
 		let pdfBuffer: Buffer;
 		try {
 			pdfBuffer = await readFile(file);
@@ -111,9 +133,23 @@ program
 			types = requested;
 		}
 
+		// With --foia, stamp + log each type's default exemption code.
+		const exemptions = opts.foia
+			? Object.fromEntries(types.map((t) => [t, DEFAULT_FOIA_EXEMPTIONS[t].code]))
+			: undefined;
+
 		let result: Awaited<ReturnType<typeof redactEntities>>;
 		try {
-			result = await redactEntities(pdfBuffer.buffer as ArrayBuffer, types);
+			result = await redactEntities(
+				pdfBuffer.buffer as ArrayBuffer,
+				types,
+				{
+					addRedactionMarkers: !!opts.foia,
+					generateManifest: !!opts.manifest,
+					...(opts.redactor ? { redactorId: opts.redactor } : {}),
+				},
+				exemptions,
+			);
 		} catch (err) {
 			console.error(`Error: Redaction failed: ${String(err)}`);
 			process.exit(1);
@@ -121,12 +157,19 @@ program
 
 		await writeFile(opts.output, result.pdf);
 
+		let manifestPath: string | undefined;
+		if (opts.manifest && result.manifest) {
+			manifestPath = opts.output.replace(/\.pdf$/i, '.manifest.json');
+			await writeFile(manifestPath, JSON.stringify(result.manifest, null, 2));
+		}
+
 		if (opts.json) {
-			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output }, null, 2));
+			console.log(JSON.stringify({ redactedCount: result.redactedCount, pagesAffected: result.pagesAffected, warnings: result.warnings, output: opts.output, manifest: manifestPath }, null, 2));
 		} else {
 			console.log(`Redacted ${result.redactedCount} entity match(es) across ${result.pagesAffected.length} page(s)`);
 			console.log(`Types: ${types.join(', ')}`);
 			console.log(`Wrote: ${opts.output}`);
+			if (manifestPath) console.log(`Wrote manifest: ${manifestPath}`);
 			printWarnings(result.warnings);
 		}
 	});

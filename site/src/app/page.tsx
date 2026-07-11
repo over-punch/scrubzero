@@ -1,6 +1,7 @@
 // scrubzero — REDACT mode (light). Toggle to /check for the audit mirror.
 import RedactDemo from "@/components/RedactDemo"
 import OcrRedactDemo from "@/components/OcrRedactDemo"
+import BatchRedactDemo from "@/components/BatchRedactDemo"
 import CodeBlock from "@/components/CodeBlock"
 import CopyInstall from "@/components/CopyInstall"
 import { ThemeMode } from "@/components/ThemeMode"
@@ -123,9 +124,21 @@ export default function Home() {
 
 			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
 
+			{/* ── Batch redaction ──────────────────────────────────────── */}
+			<section className="mb-20">
+				<SectionLabel n="03">Batch</SectionLabel>
+				<p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
+					Apply one pattern across many PDFs at once. Each file is redacted and re-verified independently,
+					then everything is zipped together with per-file audit logs and a batch summary.
+				</p>
+				<BatchRedactDemo />
+			</section>
+
+			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
+
 			{/* ── How it works ─────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel n="03">How it works</SectionLabel>
+				<SectionLabel n="04">How it works</SectionLabel>
 				<div className="flex flex-col divide-y" style={{ borderColor: "var(--rule)" }}>
 					{[
 						{ n: "01", label: "Content stream scrubbing", body: "pdfjs-dist extracts text items with positions. For each match, scrubzero locates the BT/ET block in the raw content stream bytes, finds the text-drawing operators, and blanks their string arguments. The glyph data is gone before the bar is drawn." },
@@ -149,7 +162,7 @@ export default function Home() {
 
 			{/* ── Usage ────────────────────────────────────────────────── */}
 			<section className="mb-20">
-				<SectionLabel n="04">Usage</SectionLabel>
+				<SectionLabel n="05">Usage</SectionLabel>
 				<div className="flex flex-col gap-10">
 					<div className="flex flex-col gap-3">
 						<p className="mono-label">Search and redact by text pattern</p>
@@ -236,7 +249,7 @@ npx @liiift-studio/pdf-redact verify redacted.pdf`} />
 				<div className="flex flex-col gap-2">
 					<span className="mono-label">The other side of the tool</span>
 					<a href="/check" className="group inline-flex items-baseline gap-1 text-sm">
-						<span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>Check</span>
+						<span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>Verify</span>
 						<span style={{ color: "var(--ink-dim)" }}>— is a PDF you received actually redacted?</span>
 						<span className="inline-block transition-transform group-hover:translate-x-1" style={{ color: "var(--ink-dim)" }}>→</span>
 					</a>

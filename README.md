@@ -209,6 +209,34 @@ Available entity types: `ssn`, `phone`, `email`, `credit-card`, `ip-address`, `d
 
 ---
 
+### Exemption codes & the audit log (FOIA / e-discovery)
+
+Every redaction can carry an **exemption code** — stamped on the bar (with `addRedactionMarkers`) and recorded per-match in the audit manifest (with `generateManifest`). A FOIA officer applying different exemptions to different data on the same page gets a defensible, per-redaction log; a flawless scrub with no exemption stamp is not a releasable record.
+
+```typescript
+import { redactEntities, DEFAULT_FOIA_EXEMPTIONS } from '@liiift-studio/pdf-redact';
+
+const result = await redactEntities(
+  pdfBytes.buffer,
+  ['ssn', 'email', 'attorney-client-marker'],
+  { addRedactionMarkers: true, generateManifest: true, redactorId: 'agent-7' },
+  { ssn: '(b)(6)', email: '(b)(6)', 'attorney-client-marker': '(b)(5)' },
+);
+
+// result.manifest.entries[n] = { page, bbox, basisCode, basisText, label, redactorId, timestamp, sha256Before, sha256After }
+```
+
+`DEFAULT_FOIA_EXEMPTIONS` maps each entity type to a sensible default code/basis (PII → `(b)(6)` personal privacy, privilege markers → `(b)(5)`). `searchAndRedact` accepts `exemptionCode`/`exemptionBasis` per `SearchPattern` for custom patterns. From the CLI:
+
+```bash
+pdf-redact entities document.pdf --types ssn,email --foia --manifest --redactor agent-7
+pdf-redact search document.pdf "Case 1:24-cr-00318" --exemption "(b)(7)(C)" --manifest
+```
+
+The `--manifest` flag writes `<output>.manifest.json` — the exportable redaction log — alongside the redacted PDF.
+
+---
+
 ### `redactBatch(items, concurrency?)`
 
 Process multiple PDFs concurrently with per-item error isolation. Each result's `error` is a **string** message (empty/undefined on success).

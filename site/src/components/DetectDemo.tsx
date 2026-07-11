@@ -18,8 +18,14 @@ type State =
 	| { status: "scanning" }
 	| { status: "scanned"; findings: Finding[]; pageCount: number; aiUsed: boolean; total: number; scanned: boolean }
 	| { status: "redacting" }
-	| { status: "done"; blob: Blob; filename: string; redactedCount: number }
+	| { status: "done"; blob: Blob; filename: string; redactedCount: number; manifest: unknown | null }
 	| { status: "error"; message: string }
+
+// Default FOIA exemption code for a finding type: privilege markers under (b)(5),
+// all PII under (b)(6) personal privacy.
+function defaultCode(findingType: string): string {
+	return findingType === "attorney-client-marker" ? "(b)(5)" : "(b)(6)"
+}
 
 export default function DetectDemo() {
 	const [state, setState] = useState<State>({ status: "idle" })
@@ -27,6 +33,8 @@ export default function DetectDemo() {
 	const [isDragging, setIsDragging] = useState(false)
 	const [useAI, setUseAI] = useState(false)
 	const [apiKey, setApiKey] = useState("")
+	const [foiaLog, setFoiaLog] = useState(false)
+	const [redactorId, setRedactorId] = useState("")
 	const [selected, setSelected] = useState<Set<string>>(new Set())
 
 	const handleFiles = useCallback((files: FileList | null) => {
@@ -66,22 +74,31 @@ export default function DetectDemo() {
 
 	const redact = useCallback(async (findings: Finding[]) => {
 		if (!file) return
-		const values = findings.filter((f) => selected.has(f.type)).flatMap((f) => f.values)
+		const chosen = findings.filter((f) => selected.has(f.type))
+		const values = chosen.flatMap((f) => f.values)
 		if (values.length === 0) { setState({ status: "error", message: "Select at least one item to redact" }); return }
 		setState({ status: "redacting" })
 		const form = new FormData()
 		form.set("pdf", file)
-		form.set("strings", JSON.stringify(values))
+		if (foiaLog) {
+			// Group by finding so each type carries its own exemption code and the
+			// server produces a per-redaction audit log.
+			const groups = chosen.map((f) => ({ code: defaultCode(f.type), label: f.label, values: f.values }))
+			form.set("groups", JSON.stringify(groups))
+			if (redactorId.trim()) form.set("redactorId", redactorId.trim())
+		} else {
+			form.set("strings", JSON.stringify(values))
+		}
 		try {
 			const res = await fetch("/api/redact", { method: "POST", body: form })
-			const data = await res.json() as { pdf?: string; redactedCount?: number; error?: string }
+			const data = await res.json() as { pdf?: string; redactedCount?: number; manifest?: unknown | null; error?: string }
 			if (!res.ok || data.error) { setState({ status: "error", message: data.error ?? "Redaction failed" }); return }
 			const bytes = Uint8Array.from(atob(data.pdf!), (c) => c.charCodeAt(0))
-			setState({ status: "done", blob: new Blob([bytes], { type: "application/pdf" }), filename: file.name.replace(/\.pdf$/i, "-redacted.pdf"), redactedCount: data.redactedCount ?? 0 })
+			setState({ status: "done", blob: new Blob([bytes], { type: "application/pdf" }), filename: file.name.replace(/\.pdf$/i, "-redacted.pdf"), redactedCount: data.redactedCount ?? 0, manifest: data.manifest ?? null })
 		} catch {
 			setState({ status: "error", message: "Network error — please try again" })
 		}
-	}, [file, selected])
+	}, [file, selected, foiaLog, redactorId])
 
 	const download = useCallback(() => {
 		if (state.status !== "done") return
@@ -90,6 +107,15 @@ export default function DetectDemo() {
 		a.href = url; a.download = state.filename; a.click()
 		URL.revokeObjectURL(url)
 	}, [state])
+
+	const downloadManifest = useCallback(() => {
+		if (state.status !== "done" || !state.manifest) return
+		const blob = new Blob([JSON.stringify(state.manifest, null, 2)], { type: "application/json" })
+		const url = URL.createObjectURL(blob)
+		const a = document.createElement("a")
+		a.href = url; a.download = file ? file.name.replace(/\.pdf$/i, "-redaction-log.json") : "redaction-log.json"; a.click()
+		URL.revokeObjectURL(url)
+	}, [state, file])
 
 	const onDrop = useCallback((e: DragEvent) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files) }, [handleFiles])
 
@@ -202,6 +228,24 @@ export default function DetectDemo() {
 								</label>
 							))}
 						</div>
+						{/* FOIA audit log: stamp exemption codes per type and produce a log. */}
+						<div className="panel rounded px-4 py-3 flex flex-col gap-2">
+							<label className="flex items-start gap-3 cursor-pointer">
+								<input type="checkbox" checked={foiaLog} onChange={(e) => setFoiaLog(e.target.checked)} className="mt-0.5" style={{ accentColor: "var(--foreground)" }} />
+								<span className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+									<span className="font-medium" style={{ color: "var(--foreground)" }}>FOIA audit log</span> — stamp each type&apos;s exemption code on the bar ((b)(6) for PII, (b)(5) for privilege) and produce a downloadable per-redaction log.
+								</span>
+							</label>
+							{foiaLog && (
+								<input
+									type="text"
+									value={redactorId}
+									onChange={(e) => setRedactorId(e.target.value)}
+									placeholder="Redactor ID for the log (optional) — e.g. agent-7"
+									className="field rounded px-3 py-2 text-xs font-mono"
+								/>
+							)}
+						</div>
 						<button
 							type="button"
 							onClick={() => redact(state.findings)}
@@ -219,9 +263,16 @@ export default function DetectDemo() {
 			{state.status === "done" && (
 				<div className="panel rounded px-5 py-4 flex flex-col gap-3">
 					<p className="text-sm font-medium">{state.redactedCount} region{state.redactedCount !== 1 ? "s" : ""} redacted</p>
-					<button type="button" onClick={download} className="self-start rounded px-4 py-2 text-sm transition-opacity hover:opacity-60" style={{ border: "1px solid var(--border)" }}>
-						Download redacted PDF
-					</button>
+					<div className="flex flex-wrap gap-3">
+						<button type="button" onClick={download} className="rounded px-4 py-2 text-sm transition-opacity hover:opacity-60" style={{ border: "1px solid var(--border)" }}>
+							Download redacted PDF
+						</button>
+						{state.manifest != null && (
+							<button type="button" onClick={downloadManifest} className="rounded px-4 py-2 text-sm transition-opacity hover:opacity-60" style={{ border: "1px solid var(--border)" }}>
+								Download redaction log (JSON)
+							</button>
+						)}
+					</div>
 				</div>
 			)}
 		</div>

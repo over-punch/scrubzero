@@ -38,6 +38,13 @@ export interface SearchPattern {
 	/** Optional label for redaction markers */
 	label?: string;
 	/**
+	 * Exemption code stamped on each matched bar (when addRedactionMarkers is on)
+	 * and recorded per-match in the audit manifest — e.g. a FOIA code like "(b)(6)".
+	 */
+	exemptionCode?: string;
+	/** Human-readable basis for the exemption, recorded in the manifest */
+	exemptionBasis?: string;
+	/**
 	 * PHI detector hook: receives text items with their PDF coordinates and returns
 	 * bounding boxes of detected PHI regions in the same coordinate space (bottom-left
 	 * PDF origin). Integrates with AWS Comprehend Medical, Azure Text Analytics, or
@@ -75,8 +82,12 @@ export interface RedactionEntry {
 	page: number;
 	/** Bounding box [x1, y1, x2, y2] in PDF user-space units (bottom-left origin) */
 	bbox: [number, number, number, number];
-	/** FOIA or other exemption code, if provided */
+	/** FOIA or other exemption code for this specific redaction, if provided */
 	basisCode: string | undefined;
+	/** Human-readable basis for the exemption, if provided */
+	basisText?: string | undefined;
+	/** Label rendered on the bar (exemption code or custom), if any */
+	label?: string | undefined;
 	/** Operator who performed the redaction, if provided */
 	redactorId: string | undefined;
 	/** ISO 8601 timestamp of when the redaction was applied */
@@ -156,6 +167,8 @@ export interface NormalizedRegion {
 	label: string | undefined;
 	/** FOIA exemption code carried through from the source region */
 	exemptionCode: string | undefined;
+	/** Human-readable basis for the exemption, carried through for the manifest */
+	exemptionBasis: string | undefined;
 }
 
 /**

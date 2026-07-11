@@ -53,6 +53,7 @@ function normalizeRegion(region: RedactionRegion, pageHeight: number): Normalize
 		color: region.color ?? [0, 0, 0],
 		label: region.label,
 		exemptionCode: region.exemptionCode,
+		exemptionBasis: region.exemptionBasis,
 	};
 }
 
@@ -417,13 +418,9 @@ export async function redact(
 				const barHeight = nr.yMax - nr.yMin;
 				const barWidth = nr.xMax - nr.xMin;
 
-				// Prefer exemption code label over generic label, fall back to "REDACTED"
-				let label: string;
-				if (nr.exemptionCode !== undefined) {
-					label = `Exemption ${nr.exemptionCode}`;
-				} else {
-					label = nr.label ?? 'REDACTED';
-				}
+				// Stamp the exemption code itself (FOIA convention: "(b)(6)"), else
+				// the custom label, else a generic marker.
+				const label: string = nr.exemptionCode ?? nr.label ?? 'REDACTED';
 
 				const fontSize = Math.min(barHeight * 0.6, 10);
 				const textWidth = labelFont.widthOfTextAtSize(label, fontSize);
@@ -447,7 +444,9 @@ export async function redact(
 				manifestEntries.push({
 					page: pageNum,
 					bbox: [nr.xMin, nr.yMin, nr.xMax, nr.yMax],
-					basisCode: opts.basisCode,
+					basisCode: nr.exemptionCode ?? opts.basisCode,
+					basisText: nr.exemptionBasis,
+					label: nr.label,
 					redactorId: opts.redactorId,
 					timestamp: nowIso,
 					sha256Before: sha256Input,

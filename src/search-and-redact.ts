@@ -209,6 +209,8 @@ function itemsToRegion(
 	};
 	if (pattern.color !== undefined) region.color = pattern.color;
 	if (pattern.label !== undefined) region.label = pattern.label;
+	if (pattern.exemptionCode !== undefined) region.exemptionCode = pattern.exemptionCode;
+	if (pattern.exemptionBasis !== undefined) region.exemptionBasis = pattern.exemptionBasis;
 	return region;
 }
 

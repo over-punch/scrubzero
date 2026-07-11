@@ -45,16 +45,22 @@ export async function POST(req: NextRequest) {
 	const file = formData.get("pdf")
 	const pattern = formData.get("pattern")
 	const strings = formData.get("strings") // optional JSON array of literal strings (Detect → Redact handoff)
-	const color = formData.get("color") // optional hex color like "#000000"
+	const groups = formData.get("groups")   // optional JSON [{ code, label, values[] }] (per-code Detect handoff)
+	const color = formData.get("color")     // optional hex color like "#000000"
+	const exemptionCode = formData.get("exemptionCode") // optional FOIA code applied to all matches
+	const redactorId = formData.get("redactorId")       // optional operator ID for the audit log
 
 	if (!(file instanceof File)) {
 		return Response.json({ error: "No PDF file provided" }, { status: 400 })
 	}
 	const hasPattern = typeof pattern === "string" && pattern.trim() !== ""
 	const hasStrings = typeof strings === "string" && strings.trim() !== ""
-	if (!hasPattern && !hasStrings) {
+	const hasGroups = typeof groups === "string" && groups.trim() !== ""
+	if (!hasPattern && !hasStrings && !hasGroups) {
 		return Response.json({ error: "No search pattern provided" }, { status: 400 })
 	}
+	const code = typeof exemptionCode === "string" && exemptionCode.trim() !== "" ? exemptionCode.trim() : undefined
+	const operator = typeof redactorId === "string" && redactorId.trim() !== "" ? redactorId.trim() : undefined
 	if (file.size > MAX_BYTES) {
 		return Response.json({ error: "File too large — maximum is 4 MB" }, { status: 413 })
 	}
@@ -72,16 +78,31 @@ export async function POST(req: NextRequest) {
 		const { searchAndRedact, verify } = await import("@liiift-studio/pdf-redact")
 		const buffer = await file.arrayBuffer()
 
-		// Build the pattern list — either literal strings (Detect handoff) or a single search pattern.
-		type Pat = { pattern: RegExp | string; color?: [number, number, number]; label: string }
+		// Build the pattern list. Three input shapes:
+		//  - groups:  [{ code, label, values[] }]  — Detect handoff with per-code exemptions
+		//  - strings: ["value", …]                 — flat Detect handoff (single code, if any)
+		//  - pattern: "text" or "/regex/flags"     — manual sandbox
+		type Pat = { pattern: RegExp | string; color?: [number, number, number]; label: string; exemptionCode?: string }
+		const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 		let patterns: Pat[]
-		if (hasStrings) {
+		if (hasGroups) {
+			let parsed: Array<{ code?: string; label?: string; values?: string[] }> = []
+			try { parsed = JSON.parse(groups as string) } catch { return Response.json({ error: "Invalid groups payload" }, { status: 400 }) }
+			patterns = []
+			for (const grp of parsed) {
+				const vals = [...new Set((grp.values ?? []).filter((s) => typeof s === "string" && s.trim().length > 0))].slice(0, 500)
+				for (const s of vals) {
+					patterns.push({ pattern: new RegExp(esc(s), "g"), color: redactionColor, label: grp.label ?? grp.code ?? "REDACTED", ...(grp.code ? { exemptionCode: grp.code } : {}) })
+				}
+			}
+			patterns = patterns.slice(0, 1000)
+			if (patterns.length === 0) return Response.json({ error: "No values selected to redact" }, { status: 400 })
+		} else if (hasStrings) {
 			let list: string[] = []
 			try { list = JSON.parse(strings as string) } catch { return Response.json({ error: "Invalid strings payload" }, { status: 400 }) }
 			list = [...new Set(list.filter((s) => typeof s === "string" && s.trim().length > 0))].slice(0, 500)
 			if (list.length === 0) return Response.json({ error: "No values selected to redact" }, { status: 400 })
-			const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-			patterns = list.map((s) => ({ pattern: new RegExp(esc(s), "g"), color: redactionColor, label: "REDACTED" }))
+			patterns = list.map((s) => ({ pattern: new RegExp(esc(s), "g"), color: redactionColor, label: code ?? "REDACTED", ...(code ? { exemptionCode: code } : {}) }))
 		} else {
 			let searchPattern: RegExp | string = (pattern as string).trim()
 			// Wrap in regex if the user enclosed the pattern in forward slashes.
@@ -93,15 +114,25 @@ export async function POST(req: NextRequest) {
 					return Response.json({ error: "Invalid regular expression" }, { status: 400 })
 				}
 			}
-			patterns = [{ pattern: searchPattern, color: redactionColor, label: "REDACTED" }]
+			patterns = [{ pattern: searchPattern, color: redactionColor, label: code ?? "REDACTED", ...(code ? { exemptionCode: code } : {}) }]
 		}
+
+		// Generate the audit manifest (redaction log) whenever an exemption code or
+		// redactor ID is supplied, or any pattern carries a code. Stamp the code on
+		// the bar in those cases too.
+		const anyCode = !!code || patterns.some((p) => p.exemptionCode)
+		const wantManifest = anyCode || !!operator
 
 		// Flag scanned/image PDFs: text-based redaction cannot touch image pixels,
 		// so a near-empty text layer means the bar only covers, never removes.
 		const textLen = await extractableTextLength(new Uint8Array(buffer))
 		const scanned = textLen >= 0 && textLen < MIN_TEXT_CHARS
 
-		const result = await searchAndRedact(buffer, patterns)
+		const result = await searchAndRedact(buffer, patterns, {
+			generateManifest: wantManifest,
+			addRedactionMarkers: anyCode,
+			...(operator ? { redactorId: operator } : {}),
+		})
 
 		// Surface any library-level cautions (e.g. bars over image/vector content).
 		// Read defensively so the site builds against either the current or the
@@ -142,6 +173,9 @@ export async function POST(req: NextRequest) {
 			scanned,
 			warnings,
 			verified,
+			// The exportable redaction log — present when an exemption code or
+			// redactor ID was supplied. The client offers it as a JSON download.
+			manifest: (result as { manifest?: unknown }).manifest ?? null,
 		})
 	} catch (err) {
 		console.error("pdf-redact error:", err)

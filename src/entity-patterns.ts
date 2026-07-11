@@ -73,13 +73,36 @@ export const EntityPatterns: Record<EntityType, SearchPattern> = {
 };
 
 /**
+ * Sensible default FOIA exemption codes per entity type, for public-records
+ * redaction. PII falls under Exemption 6 (personal privacy); privilege markers
+ * under Exemption 5 (deliberative/attorney work product). Callers can override
+ * per type via the `exemptions` argument to redactEntities().
+ */
+export const DEFAULT_FOIA_EXEMPTIONS: Record<EntityType, { code: string; basis: string }> = {
+	ssn: { code: '(b)(6)', basis: 'Personal privacy' },
+	phone: { code: '(b)(6)', basis: 'Personal privacy' },
+	email: { code: '(b)(6)', basis: 'Personal privacy' },
+	'credit-card': { code: '(b)(6)', basis: 'Personal privacy' },
+	'ip-address': { code: '(b)(6)', basis: 'Personal privacy' },
+	date: { code: '(b)(6)', basis: 'Personal privacy' },
+	name: { code: '(b)(6)', basis: 'Personal privacy' },
+	'attorney-client-marker': { code: '(b)(5)', basis: 'Attorney work product / deliberative' },
+};
+
+/**
  * Redact all occurrences of the specified entity types in a PDF.
  * Uses pre-built regex patterns for each entity type.
+ *
+ * `exemptions` optionally maps an entity type to an exemption code (e.g.
+ * `{ ssn: '(b)(6)' }`). Any code provided is stamped on the bar (when
+ * `options.addRedactionMarkers` is on) and recorded per-match in the manifest
+ * (when `options.generateManifest` is on).
  */
 export async function redactEntities(
 	pdf: ArrayBuffer,
 	entityTypes: EntityType[],
 	options?: RedactOptions,
+	exemptions?: Partial<Record<EntityType, string>>,
 ): Promise<RedactResult> {
 	if (entityTypes.length === 0) {
 		const { PDFDocument } = await import('pdf-lib');
@@ -97,7 +120,13 @@ export async function redactEntities(
 			srcPattern instanceof RegExp
 				? new RegExp(srcPattern.source, srcPattern.flags)
 				: srcPattern;
-		return { ...base, pattern: freshPattern };
+		const pattern: SearchPattern = { ...base, pattern: freshPattern };
+		const code = exemptions?.[type];
+		if (code !== undefined) {
+			pattern.exemptionCode = code;
+			pattern.exemptionBasis = DEFAULT_FOIA_EXEMPTIONS[type]?.basis;
+		}
+		return pattern;
 	});
 
 	return searchAndRedact(pdf, patterns, options);

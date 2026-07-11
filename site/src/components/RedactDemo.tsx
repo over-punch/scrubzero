@@ -9,14 +9,20 @@ type Verified = { clean: boolean; violations: number; recovered: string[]; warni
 type State =
 	| { status: "idle" }
 	| { status: "loading" }
-	| { status: "done"; redactedCount: number; pagesAffected: number[]; blob: Blob; filename: string; scanned: boolean; warnings: string[]; verified: Verified | null }
+	| { status: "done"; redactedCount: number; pagesAffected: number[]; blob: Blob; filename: string; scanned: boolean; warnings: string[]; verified: Verified | null; manifest: unknown | null }
 	| { status: "error"; message: string }
+
+// Common FOIA exemption codes, offered as quick-fill chips for the audit log.
+const FOIA_CODES = ["(b)(6)", "(b)(7)(C)", "(b)(5)", "(b)(4)", "(b)(7)(E)"]
 
 export default function RedactDemo() {
 	const [state, setState] = useState<State>({ status: "idle" })
 	const [isDragging, setIsDragging] = useState(false)
 	const [file, setFile] = useState<File | null>(null)
 	const [color, setColor] = useState("#111111")
+	const [exemptionCode, setExemptionCode] = useState("")
+	const [redactorId, setRedactorId] = useState("")
+	const [showAudit, setShowAudit] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 
 	const handleFiles = useCallback((files: FileList | null) => {
@@ -48,11 +54,13 @@ export default function RedactDemo() {
 		const form = new FormData(e.currentTarget)
 		form.set("pdf", file)
 		form.set("color", color)
+		if (exemptionCode.trim()) form.set("exemptionCode", exemptionCode.trim())
+		if (redactorId.trim()) form.set("redactorId", redactorId.trim())
 
 		setState({ status: "loading" })
 		try {
 			const res = await fetch("/api/redact", { method: "POST", body: form })
-			const data = await res.json() as { pdf?: string; redactedCount?: number; pagesAffected?: number[]; scanned?: boolean; warnings?: string[]; verified?: Verified | null; error?: string }
+			const data = await res.json() as { pdf?: string; redactedCount?: number; pagesAffected?: number[]; scanned?: boolean; warnings?: string[]; verified?: Verified | null; manifest?: unknown | null; error?: string }
 			if (!res.ok || data.error) {
 				setState({ status: "error", message: data.error ?? "Redaction failed" })
 			} else {
@@ -67,12 +75,25 @@ export default function RedactDemo() {
 					scanned: data.scanned ?? false,
 					warnings: data.warnings ?? [],
 					verified: data.verified ?? null,
+					manifest: data.manifest ?? null,
 				})
 			}
 		} catch {
 			setState({ status: "error", message: "Network error — please try again" })
 		}
-	}, [file, color])
+	}, [file, color, exemptionCode, redactorId])
+
+	// Download the audit manifest (redaction log) as a JSON file.
+	const downloadManifest = useCallback(() => {
+		if (state.status !== "done" || !state.manifest) return
+		const blob = new Blob([JSON.stringify(state.manifest, null, 2)], { type: "application/json" })
+		const url = URL.createObjectURL(blob)
+		const a = document.createElement("a")
+		a.href = url
+		a.download = file ? file.name.replace(/\.pdf$/i, "-redaction-log.json") : "redaction-log.json"
+		a.click()
+		URL.revokeObjectURL(url)
+	}, [state, file])
 
 	const downloadResult = useCallback(() => {
 		if (state.status !== "done") return
@@ -157,6 +178,51 @@ export default function RedactDemo() {
 				</div>
 			</div>
 
+			{/* Step 4 — audit log (optional). Adding an exemption code stamps it on
+			    each bar and produces a downloadable, per-redaction JSON log. */}
+			<div className="flex flex-col gap-3">
+				<button type="button" onClick={() => setShowAudit((v) => !v)} className="flex items-center gap-2 self-start" aria-expanded={showAudit}>
+					<span className="mono-label">04 — Exemption code &amp; audit log</span>
+					<span className="mono-label" style={{ color: "var(--ink-faint)" }}>{showAudit ? "− optional" : "+ optional"}</span>
+				</button>
+				{showAudit && (
+					<div className="flex flex-col gap-3 pl-1">
+						<div className="flex flex-wrap gap-2">
+							{FOIA_CODES.map((c) => (
+								<button
+									key={c}
+									type="button"
+									onClick={() => setExemptionCode((cur) => (cur === c ? "" : c))}
+									className="text-xs px-3 py-1.5 rounded-full transition-opacity"
+									style={exemptionCode === c
+										? { background: "var(--btn-bg)", color: "var(--btn-fg)", fontFamily: "var(--font-mono)" }
+										: { border: "1px solid var(--border)", color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}
+								>
+									{c}
+								</button>
+							))}
+						</div>
+						<input
+							type="text"
+							value={exemptionCode}
+							onChange={(e) => setExemptionCode(e.target.value)}
+							placeholder="Exemption / basis code — stamped on each bar (e.g. (b)(6))"
+							className="field rounded px-4 py-3 text-sm"
+						/>
+						<input
+							type="text"
+							value={redactorId}
+							onChange={(e) => setRedactorId(e.target.value)}
+							placeholder="Redactor ID — recorded in the log (e.g. agent-7)"
+							className="field rounded px-4 py-3 text-sm"
+						/>
+						<p className="text-xs" style={{ color: "var(--ink-dim)" }}>
+							Providing either produces a downloadable JSON audit manifest — one entry per redaction with page, bounding box, code, timestamp, and SHA-256 of the input and output.
+						</p>
+					</div>
+				)}
+			</div>
+
 			{/* Submit */}
 			<button
 				type="submit"
@@ -230,14 +296,26 @@ export default function RedactDemo() {
 						</div>
 					)}
 
-					<button
-						type="button"
-						onClick={downloadResult}
-						className="self-start rounded px-4 py-2 text-sm transition-opacity hover:opacity-60"
-						style={{ border: "1px solid var(--border)" }}
-					>
-						Download redacted PDF
-					</button>
+					<div className="flex flex-wrap gap-3">
+						<button
+							type="button"
+							onClick={downloadResult}
+							className="rounded px-4 py-2 text-sm transition-opacity hover:opacity-60"
+							style={{ border: "1px solid var(--border)" }}
+						>
+							Download redacted PDF
+						</button>
+						{state.manifest != null && (
+							<button
+								type="button"
+								onClick={downloadManifest}
+								className="rounded px-4 py-2 text-sm transition-opacity hover:opacity-60"
+								style={{ border: "1px solid var(--border)" }}
+							>
+								Download redaction log (JSON)
+							</button>
+						)}
+					</div>
 				</div>
 			)}
 		</form>
