@@ -98,6 +98,15 @@ export default function OcrRedactDemo() {
 		cancelRef.current = false
 		setState({ status: "running", message: "Loading OCR engine…", progress: 0.02 })
 
+		// pdfjs schedules its render loop with requestAnimationFrame, which the
+		// browser PAUSES in a hidden/background tab — so a user who switches away
+		// mid-run would see rendering stall. Route rAF through a timer for the
+		// duration of the run (rendering is to a detached canvas, so there's no
+		// visual smoothness to lose); restored in the finally below. OCR itself
+		// runs in a Web Worker and is already unaffected by tab visibility.
+		const origRaf = window.requestAnimationFrame
+		window.requestAnimationFrame = (cb) => window.setTimeout(() => cb(performance.now()), 0) as unknown as number
+
 		try {
 			const [pdfjsLib, tesseract, { PDFDocument }, pkg] = await Promise.all([
 				import("pdfjs-dist"),        // named exports: getDocument, GlobalWorkerOptions, version
@@ -185,6 +194,8 @@ export default function OcrRedactDemo() {
 			setState({ status: "done", blob, filename: file.name.replace(/\.pdf$/i, "-redacted.pdf"), redactedCount, pageCount, matched: redactedCount > 0 })
 		} catch (err) {
 			setState({ status: "error", message: err instanceof Error ? `OCR redaction failed — ${err.message}` : "OCR redaction failed" })
+		} finally {
+			window.requestAnimationFrame = origRaf
 		}
 	}, [file, selected, custom, color])
 
