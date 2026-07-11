@@ -100,6 +100,64 @@ export default function Home() {
 
 			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
 
+			{/* ── Built for (verticals) ────────────────────────────────── */}
+			<section className="mb-20">
+				<div className="flex items-center gap-3 mb-8">
+					<span className="mono-label shrink-0" style={{ color: "var(--foreground)" }}>Built for</span>
+					<div className="flex-1 h-px" style={{ background: "var(--rule)" }} />
+				</div>
+				<h2 className="mb-8" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem, 4vw, 2.2rem)", letterSpacing: "-0.01em", lineHeight: 1.1 }}>
+					The people who can&apos;t get redaction wrong.
+				</h2>
+				<div className="grid sm:grid-cols-2 gap-x-10" style={{ }}>
+					{[
+						{ label: "FOIA & public records", body: "Release records under exemption codes with a defensible, per-redaction audit log." },
+						{ label: "Legal & e-discovery", body: "Produce discovery where the black boxes can't be peeled off — with exemption stamps and a chain-of-custody log." },
+						{ label: "Healthcare / HIPAA", body: "Strip PHI from records, and OCR-flatten scans so nothing survives in the page image." },
+						{ label: "Journalism & research", body: "Check whether a leaked or FOIA'd PDF was actually redacted — and reveal what wasn't." },
+						{ label: "Financial services", body: "Redact account numbers and SSNs before sharing, across many files at once." },
+						{ label: "Government & defense", body: "Runs offline and in-browser — files never leave your device or your network." },
+					].map(({ label, body }) => (
+						<div key={label} className="py-5 border-b flex flex-col gap-1.5" style={{ borderColor: "var(--rule)" }}>
+							<span className="text-sm font-medium">{label}</span>
+							<p className="text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>{body}</p>
+						</div>
+					))}
+				</div>
+			</section>
+
+			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
+
+			{/* ── Your files stay put (self-host / privacy / OSS) ──────── */}
+			<section className="mb-20">
+				<div className="flex items-center gap-3 mb-8">
+					<span className="mono-label shrink-0" style={{ color: "var(--foreground)" }}>Where your files go</span>
+					<div className="flex-1 h-px" style={{ background: "var(--rule)" }} />
+				</div>
+				<h2 className="mb-8" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem, 4vw, 2.2rem)", letterSpacing: "-0.01em", lineHeight: 1.1 }}>
+					Your files never leave your control.
+				</h2>
+				<div className="flex flex-col divide-y" style={{ borderColor: "var(--rule)" }}>
+					{[
+						{ label: "In your browser", body: "OCR redaction runs entirely client-side — the scan is rendered, read, and rebuilt on your device and is never uploaded." },
+						{ label: "On your servers", body: "The same engine is an MIT-licensed npm package for Node.js and AWS Lambda. Self-host it, run it air-gapped, no vendor lock-in — the document never touches ours." },
+						{ label: "On scrubzero.org", body: "When you do use the hosted tools, files are processed in memory and never written to disk or logged — discarded the moment the response is sent." },
+					].map(({ label, body }) => (
+						<div key={label} className="py-5 flex flex-col gap-1.5">
+							<span className="text-sm font-medium">{label}</span>
+							<p className="text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>{body}</p>
+						</div>
+					))}
+				</div>
+				<div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 mono-label">
+					<span style={{ color: "var(--ink-dim)" }}>MIT · open source</span>
+					<a href="https://npmjs.com/package/@liiift-studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity" style={{ color: "var(--ink-dim)" }}>npm</a>
+					<a href="https://github.com/Liiift-Studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity" style={{ color: "var(--ink-dim)" }}>★ Star on GitHub</a>
+				</div>
+			</section>
+
+			<div className="h-px mb-20" style={{ background: "var(--rule)" }} />
+
 			{/* ── Sandbox ──────────────────────────────────────────────── */}
 			<section className="mb-20">
 				<SectionLabel n="01">Sandbox</SectionLabel>
