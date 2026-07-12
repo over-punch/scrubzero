@@ -23,11 +23,17 @@ export function RedactTransition({ children }: { children: React.ReactNode }) {
 		// Accessibility: honour reduced-motion — skip the full-screen wipe entirely
 		// and flip theme + route instantly (no flash, no 508 blocker).
 		const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-		if (reduce) {
+		// First switch of a session gets the full redaction-wipe (the delight);
+		// repeats get a quick cross-fade (the body colour transition) so it never
+		// becomes a per-toggle toll booth.
+		let seen = false
+		try { seen = sessionStorage.getItem("sz-wiped") === "1" } catch { /* private mode */ }
+		if (reduce || seen) {
 			document.documentElement.dataset.mode = mode
 			router.push(href)
 			return
 		}
+		try { sessionStorage.setItem("sz-wiped", "1") } catch { /* ignore */ }
 		setPhase((p) => {
 			if (p !== "idle") return p
 			pending.current = { href, mode }
