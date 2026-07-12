@@ -80,16 +80,16 @@ export default function Home() {
 				</p>
 
 				<div className="flex flex-wrap items-center gap-4">
-					<CopyInstall pkg="@liiift-studio/pdf-redact" />
+					<CopyInstall pkg="scrubzero" />
 					<a
-						href="https://npmjs.com/package/@liiift-studio/pdf-redact"
+						href="https://npmjs.com/package/scrubzero"
 						className="text-xs font-medium px-4 py-2 rounded-full transition-opacity hover:opacity-80"
 						style={{ background: "var(--btn-bg)", color: "var(--btn-fg)", fontFamily: "var(--font-mono)" }}
 					>
 						npm
 					</a>
 					<a
-						href="https://github.com/Liiift-Studio/pdf-redact"
+						href="https://github.com/Liiift-Studio/scrubzero"
 						className="text-xs px-4 py-2 rounded-full border transition-opacity opacity-70 hover:opacity-100"
 						style={{ borderColor: "var(--border)", fontFamily: "var(--font-mono)" }}
 					>
@@ -151,8 +151,8 @@ export default function Home() {
 				</div>
 				<div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 mono-label">
 					<span style={{ color: "var(--ink-dim)" }}>MIT · open source</span>
-					<a href="https://npmjs.com/package/@liiift-studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity" style={{ color: "var(--ink-dim)" }}>npm</a>
-					<a href="https://github.com/Liiift-Studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity" style={{ color: "var(--ink-dim)" }}>★ Star on GitHub</a>
+					<a href="https://npmjs.com/package/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity" style={{ color: "var(--ink-dim)" }}>npm</a>
+					<a href="https://github.com/Liiift-Studio/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity" style={{ color: "var(--ink-dim)" }}>★ Star on GitHub</a>
 				</div>
 			</section>
 
@@ -224,7 +224,7 @@ export default function Home() {
 				<div className="flex flex-col gap-10">
 					<div className="flex flex-col gap-3">
 						<p className="mono-label">Search and redact by text pattern</p>
-						<CodeBlock code={`import { searchAndRedact } from '@liiift-studio/pdf-redact'
+						<CodeBlock code={`import { searchAndRedact } from 'scrubzero'
 import { readFile, writeFile } from 'node:fs/promises'
 
 const pdf = await readFile('document.pdf')
@@ -238,7 +238,7 @@ console.log(\`\${result.redactedCount} regions redacted\`)`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="mono-label">Redact specific regions by coordinate</p>
-						<CodeBlock code={`import { redact } from '@liiift-studio/pdf-redact'
+						<CodeBlock code={`import { redact } from 'scrubzero'
 
 const result = await redact(pdf.buffer, [
   { page: 1, x: 72, y: 140, width: 200, height: 18 },
@@ -247,7 +247,7 @@ const result = await redact(pdf.buffer, [
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="mono-label">Entity patterns — SSN, phone, email, credit card, and more</p>
-						<CodeBlock code={`import { redactEntities } from '@liiift-studio/pdf-redact'
+						<CodeBlock code={`import { redactEntities } from 'scrubzero'
 
 const result = await redactEntities(pdf.buffer, [
   'ssn', 'phone', 'email', 'credit-card',
@@ -264,10 +264,10 @@ const result = await redactEntities(pdf.buffer, [
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="mono-label">CLI</p>
-						<CodeBlock code={`npx @liiift-studio/pdf-redact search document.pdf "John Smith" --output redacted.pdf
-npx @liiift-studio/pdf-redact search document.pdf "/\\d{3}-\\d{2}-\\d{4}/g" --color #1a1a1a
-npx @liiift-studio/pdf-redact entities document.pdf --types ssn,phone,email
-npx @liiift-studio/pdf-redact verify redacted.pdf`} />
+						<CodeBlock code={`npx scrubzero search document.pdf "John Smith" --output redacted.pdf
+npx scrubzero search document.pdf "/\\d{3}-\\d{2}-\\d{4}/g" --color #1a1a1a
+npx scrubzero entities document.pdf --types ssn,phone,email
+npx scrubzero verify redacted.pdf`} />
 					</div>
 				</div>
 
@@ -314,8 +314,8 @@ npx @liiift-studio/pdf-redact verify redacted.pdf`} />
 				</div>
 				<div className="flex flex-wrap items-center gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>
 					<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">liiift.studio</a>
-					<a href="https://github.com/Liiift-Studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
-					<a href="https://npmjs.com/package/@liiift-studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
+					<a href="https://github.com/Liiift-Studio/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
+					<a href="https://npmjs.com/package/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
 					<span>v{version}</span>
 					<span className="ml-auto px-1.5 py-0.5" style={{ color: "var(--ink-faint)", border: "1px solid var(--border)", borderRadius: "2px", letterSpacing: "0.08em" }}>
 						SCRUBZERO-000447

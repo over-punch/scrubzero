@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 	}
 
 	try {
-		const { searchAndRedact, verify } = await import("@liiift-studio/pdf-redact")
+		const { searchAndRedact, verify } = await import("scrubzero")
 		const buffer = await file.arrayBuffer()
 
 		// Build the pattern list. Three input shapes:
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
 		// Surface any library-level cautions (e.g. bars over image/vector content).
 		// Read defensively so the site builds against either the current or the
-		// warnings-aware (>= 0.2.0) release of @liiift-studio/pdf-redact.
+		// warnings-aware (>= 0.2.0) release of scrubzero.
 		const libWarnings = (result as { warnings?: Array<{ message: string }> }).warnings ?? []
 		const warnings = libWarnings.map((w) => w.message)
 		if (scanned) {

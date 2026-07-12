@@ -100,7 +100,7 @@ export default function Detect() {
 				<div className="flex flex-col divide-y" style={{ borderColor: "var(--rule)" }}>
 					{[
 						{ n: "01", label: "Detect", body: "Two tiers. A deterministic regex tier (SSN, phone, email, credit card, IP, date) that always runs free and offline. An optional AI tier that finds person names, organisations, and street addresses — the entities patterns can't reliably catch — using your own API key (paid accounts, no key required, are coming)." },
-						{ n: "02", label: "Redact", body: "Confirm what to remove and scrubzero scrubs the text operators from the content stream before drawing the bar — no hidden layers, nothing recoverable. The same engine you'd call as @liiift-studio/pdf-redact." },
+						{ n: "02", label: "Redact", body: "Confirm what to remove and scrubzero scrubs the text operators from the content stream before drawing the bar — no hidden layers, nothing recoverable. The same engine you'd call as scrubzero." },
 						{ n: "03", label: "Check", body: "Verify the result. Switch to Check mode and confirm the redaction actually holds — no text under the bar, no recoverable prior revision, no metadata leak." },
 					].map(({ n, label, body }) => (
 						<div key={n} className="py-6 flex flex-col gap-2">
@@ -126,8 +126,8 @@ export default function Detect() {
 				</div>
 				<div className="flex flex-wrap items-center gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>
 					<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">liiift.studio</a>
-					<a href="https://github.com/Liiift-Studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
-					<a href="https://npmjs.com/package/@liiift-studio/pdf-redact" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
+					<a href="https://github.com/Liiift-Studio/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
+					<a href="https://npmjs.com/package/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
 					<span>v{version}</span>
 					<span className="ml-auto px-1.5 py-0.5" style={{ color: "var(--ink-faint)", border: "1px solid var(--border)", borderRadius: "2px", letterSpacing: "0.08em" }}>
 						SCRUBZERO-000447

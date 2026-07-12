@@ -1,5 +1,5 @@
 // /api/detect — scan a PDF for content that *should* be redacted.
-// Free tier: deterministic entity regexes from @liiift-studio/pdf-redact.
+// Free tier: deterministic entity regexes from scrubzero.
 // AI tier (bring-your-own-key): an LLM pass for the entities regex can't catch
 // — person names, organisations, street addresses. The key is used for this one
 // request and never stored or logged.
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 		const textChars = pages.join("").replace(/\s/g, "").length
 		const scanned = textChars < 24
 
-		const { EntityPatterns } = await import("@liiift-studio/pdf-redact")
+		const { EntityPatterns } = await import("scrubzero")
 		const findings: Finding[] = []
 
 		// ── Regex tier ──────────────────────────────────────────────

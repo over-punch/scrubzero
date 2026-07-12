@@ -1,5 +1,5 @@
 // scrubzero — CHECK mode (dark). Audit a PDF you received: is it actually redacted?
-// Backed by the @liiift-studio/unseal package; toggle to / for Redact mode.
+// Backed by the scrubzero package; toggle to / for Redact mode.
 import type { Metadata } from "next"
 import AuditDemo from "@/components/AuditDemo"
 import CodeBlock from "@/components/CodeBlock"
@@ -116,16 +116,16 @@ export default function Check() {
 					</p>
 
 					<div className="flex flex-wrap items-center gap-4">
-						<CopyInstall pkg="@liiift-studio/unseal" />
+						<CopyInstall pkg="scrubzero" />
 						<a
-							href="https://npmjs.com/package/@liiift-studio/unseal"
+							href="https://npmjs.com/package/scrubzero"
 							className="text-xs font-medium px-4 py-2 rounded-full transition-opacity hover:opacity-80"
 							style={{ background: "var(--btn-bg)", color: "var(--btn-fg)", fontFamily: "var(--font-mono)" }}
 						>
 							npm
 						</a>
 						<a
-							href="https://github.com/Liiift-Studio/unseal"
+							href="https://github.com/Liiift-Studio/scrubzero"
 							className="text-xs px-4 py-2 rounded-full border transition-opacity opacity-70 hover:opacity-100"
 							style={{ borderColor: "var(--border)", color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}
 						>
@@ -177,7 +177,7 @@ export default function Check() {
 					<div className="flex flex-col gap-10">
 						<div className="flex flex-col gap-3">
 							<p className="mono-label">Basic audit</p>
-							<CodeBlock code={`import { audit } from '@liiift-studio/unseal'
+							<CodeBlock code={`import { audit } from 'scrubzero'
 import { readFile } from 'node:fs/promises'
 
 const pdf = await readFile('document.pdf')
@@ -191,7 +191,7 @@ if (!report.clean) {
 						</div>
 						<div className="flex flex-col gap-3">
 							<p className="mono-label">Reveal — lift the fake bars so the hidden text is readable</p>
-							<CodeBlock code={`import { unseal } from '@liiift-studio/unseal'
+							<CodeBlock code={`import { unseal } from 'scrubzero'
 
 const result = await unseal(pdf.buffer)
 // result.pdf         — the document with the fake redaction stripped,
@@ -201,9 +201,9 @@ const result = await unseal(pdf.buffer)
 						</div>
 						<div className="flex flex-col gap-3">
 							<p className="mono-label">CLI</p>
-							<CodeBlock code={`npx @liiift-studio/unseal audit document.pdf
-npx @liiift-studio/unseal audit document.pdf --preset forensic --json
-npx @liiift-studio/unseal strip document.pdf --output unsealed.pdf --report findings.json`} />
+							<CodeBlock code={`npx scrubzero audit document.pdf
+npx scrubzero audit document.pdf --preset forensic --json
+npx scrubzero strip document.pdf --output unsealed.pdf --report findings.json`} />
 						</div>
 					</div>
 				</section>
@@ -220,8 +220,8 @@ npx @liiift-studio/unseal strip document.pdf --output unsealed.pdf --report find
 					</div>
 					<div className="flex flex-wrap items-center gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>
 						<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">liiift.studio</a>
-						<a href="https://github.com/Liiift-Studio/unseal" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
-						<a href="https://npmjs.com/package/@liiift-studio/unseal" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
+						<a href="https://github.com/Liiift-Studio/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
+						<a href="https://npmjs.com/package/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
 						<span>v{version}</span>
 						<span className="ml-auto px-1.5 py-0.5" style={{ color: "var(--ink-faint)", border: "1px solid var(--border)", borderRadius: "2px", letterSpacing: "0.08em" }}>
 							UNSEAL-000447

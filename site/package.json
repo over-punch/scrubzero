@@ -9,14 +9,13 @@
 		"lint": "eslint"
 	},
 	"dependencies": {
-		"@liiift-studio/pdf-redact": "^0.3.0",
-		"@liiift-studio/unseal": "^0.1.1",
 		"jszip": "^3.10.1",
 		"next": "^15.3.2",
 		"pdf-lib": "^1.17.1",
 		"pdfjs-dist": "^4.10.38",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
+		"scrubzero": "^1.0.0",
 		"tesseract.js": "^7.0.0"
 	},
 	"devDependencies": {

@@ -112,7 +112,7 @@ export default function OcrRedactDemo() {
 				import("pdfjs-dist"),        // named exports: getDocument, GlobalWorkerOptions, version
 				import("tesseract.js"),
 				import("pdf-lib"),
-				import("@liiift-studio/pdf-redact"),
+				import("scrubzero"),
 			])
 			// pdfjs needs a worker; load the matching version from CDN (normal web app, no CSP block).
 			pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
