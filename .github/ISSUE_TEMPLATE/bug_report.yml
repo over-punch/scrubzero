@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in pdf-redact behaves incorrectly (non-security)
+description: Something in scrubzero behaves incorrectly (non-security)
 labels: ["bug"]
 body:
   - type: markdown
@@ -7,12 +7,12 @@ body:
       value: |
         Thanks for the report! **If the bug is that redacted content is still
         recoverable, or `verify()` reported a false clean — that's a security issue.
-        Do not file it here; [report it privately](https://github.com/Liiift-Studio/pdf-redact/security/advisories/new) instead.**
+        Do not file it here; [report it privately](https://github.com/Liiift-Studio/scrubzero/security/advisories/new) instead.**
   - type: input
     id: version
     attributes:
       label: Version
-      description: "`@liiift-studio/pdf-redact` version (upgrade to latest first)"
+      description: "`scrubzero` version (upgrade to latest first)"
       placeholder: "0.3.0"
     validations:
       required: true

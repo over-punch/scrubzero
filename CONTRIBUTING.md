@@ -1,4 +1,4 @@
-# Contributing to pdf-redact
+# Contributing to scrubzero
 
 Thanks for helping make PDF redaction actually safe. This is a small, focused
 library — a true content-stream redactor for Node.js and Lambda with no native
@@ -12,8 +12,8 @@ binaries — and contributions that keep it that way are very welcome.
 Requires Node.js >= 18.
 
 ```bash
-git clone https://github.com/Liiift-Studio/pdf-redact
-cd pdf-redact
+git clone https://github.com/Liiift-Studio/scrubzero
+cd scrubzero
 npm install
 npm run build       # tsup → dual ESM + CJS in dist/
 npm test            # vitest run
@@ -51,7 +51,7 @@ typechecks) → `npm publish`. Bump the `pkg.version` string in `src/cli.ts` to 
 
 ## Reporting bugs & ideas
 
-Open a [bug report](https://github.com/Liiift-Studio/pdf-redact/issues/new/choose) or
+Open a [bug report](https://github.com/Liiift-Studio/scrubzero/issues/new/choose) or
 a feature request via the issue templates. For open-ended questions, start a
 Discussion. By contributing, you agree your work is licensed under the project's
 [MIT License](LICENSE).

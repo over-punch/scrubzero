@@ -3,7 +3,7 @@
 
 import { program } from 'commander';
 import { readFile, writeFile } from 'fs/promises';
-import { redact, searchAndRedact, redactEntities, verify, DEFAULT_FOIA_EXEMPTIONS } from './index.js';
+import { redact, searchAndRedact, redactEntities, verify, DEFAULT_FOIA_EXEMPTIONS, audit, unseal, AuditPresets } from './index.js';
 import type { EntityType } from './entity-patterns.js';
 import type { RedactionRegion, RedactWarning } from './types.js';
 
@@ -16,11 +16,11 @@ function printWarnings(warnings: RedactWarning[]): void {
 	}
 }
 
-const pkg = { version: '0.3.0' };
+const pkg = { version: '1.0.0' };
 
 program
-	.name('pdf-redact')
-	.description('True PDF content-stream redaction — removes text before drawing the bar')
+	.name('scrubzero')
+	.description('PDF redaction toolkit — redact (content-stream), audit/unseal fake redactions, and verify')
 	.version(pkg.version);
 
 // ─── search ──────────────────────────────────────────────────────────────────
@@ -300,6 +300,104 @@ function hexToRgb(hex: string): [number, number, number] {
 	if (isNaN(n) || clean.length !== 6) return [0, 0, 0];
 	return [(n >> 16 & 0xff) / 255, (n >> 8 & 0xff) / 255, (n & 0xff) / 255];
 }
+
+// ─── audit (folded from unseal) ──────────────────────────────────────────────
+
+program
+	.command('audit <file>')
+	.description('Audit a PDF for fake or insecure redactions (text under boxes, revisions, leaks)')
+	.option('--preset <preset>', 'Preset: quick | compliance | forensic', 'quick')
+	.option('--json', 'Output results as JSON')
+	.action(async (file: string, opts: { preset: string; json?: boolean }) => {
+		let pdfBuffer: Buffer;
+		try {
+			pdfBuffer = await readFile(file);
+		} catch (err) {
+			console.error(`Error: Cannot read file "${file}": ${String(err)}`);
+			process.exit(1);
+		}
+
+		const options = AuditPresets[opts.preset as keyof typeof AuditPresets] ?? AuditPresets.quick;
+
+		let report: Awaited<ReturnType<typeof audit>>;
+		try {
+			report = await audit(pdfBuffer.buffer as ArrayBuffer, options);
+		} catch (err) {
+			console.error(`Error: Failed to audit PDF: ${String(err)}`);
+			process.exit(1);
+		}
+
+		if (opts.json) {
+			console.log(JSON.stringify(report, null, 2));
+			process.exit(report.clean ? 0 : 1);
+		}
+
+		if (report.clean) {
+			console.log(`✓ No issues found (SHA-256: ${report.sha256.slice(0, 16)}…)`);
+		} else {
+			console.log(`✗ ${report.findings.length} issue(s) found (SHA-256: ${report.sha256.slice(0, 16)}…)`);
+			for (const f of report.findings) {
+				const pageStr = f.page ? ` [page ${f.page}]` : '';
+				const recoveredStr = f.recoveredText ? ` → "${f.recoveredText.slice(0, 60)}"` : '';
+				console.log(`  [${f.severity}]${pageStr} ${f.check}: ${f.detail}${recoveredStr}`);
+			}
+			process.exit(1);
+		}
+	});
+
+// ─── strip (folded from unseal) ──────────────────────────────────────────────
+
+program
+	.command('strip <file>')
+	.description('Strip fake redactions and write a usable PDF (reveals what was hidden)')
+	.option('--output <file>', 'Output PDF file path', 'unsealed.pdf')
+	.option('--report <file>', 'Write a JSON findings report to this file')
+	.option('--no-audit', 'Skip the built-in audit pass')
+	.action(async (file: string, opts: { output: string; report?: string; audit: boolean }) => {
+		let pdfBuffer: Buffer;
+		try {
+			pdfBuffer = await readFile(file);
+		} catch (err) {
+			console.error(`Error: Cannot read file "${file}": ${String(err)}`);
+			process.exit(1);
+		}
+
+		let result: Awaited<ReturnType<typeof unseal>>;
+		try {
+			result = await unseal(pdfBuffer.buffer as ArrayBuffer, { output: 'both', includeAudit: opts.audit !== false });
+		} catch (err) {
+			console.error(`Error: Failed to process PDF: ${String(err)}`);
+			process.exit(1);
+		}
+
+		if (result.pdf) {
+			await writeFile(opts.output, result.pdf);
+			console.log(`Wrote unsealed PDF to: ${opts.output}`);
+		}
+		console.log(`Stripped: ${result.overlaysStripped} overlay(s), ${result.annotationsRemoved} annotation(s)`);
+		if (result.priorRevisionRecovered) console.log('Prior revision recovered — see findings report for details');
+
+		for (const f of result.findings) {
+			const pageStr = f.page ? ` [page ${f.page}]` : '';
+			const recoveredStr = f.recoveredText ? ` → "${f.recoveredText.slice(0, 60)}"` : '';
+			console.log(`  [Scenario ${f.scenario}]${pageStr} confidence=${(f.confidence * 100).toFixed(0)}%${recoveredStr}`);
+		}
+
+		if (opts.report) {
+			const reportData = {
+				findings: result.findings.map((f) => ({
+					...f,
+					priorRevisionPdf: f.priorRevisionPdf ? `<${f.priorRevisionPdf.length} bytes>` : undefined,
+				})),
+				overlaysStripped: result.overlaysStripped,
+				annotationsRemoved: result.annotationsRemoved,
+				priorRevisionRecovered: result.priorRevisionRecovered,
+				auditReport: result.auditReport,
+			};
+			await writeFile(opts.report, JSON.stringify(reportData, null, 2));
+			console.log(`Wrote findings report to: ${opts.report}`);
+		}
+	});
 
 program.parseAsync(process.argv).catch((err) => {
 	console.error(String(err));

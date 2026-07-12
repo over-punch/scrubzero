@@ -1,18 +1,19 @@
 # Security Policy
 
-`pdf-redact` is a redaction tool: its job is to make sure removed content is
+`scrubzero` is a redaction tool: its job is to make sure removed content is
 **actually gone**. A bug that leaves redacted content recoverable is a security
 vulnerability, not a normal bug — please treat it as one and report it privately.
 
 ## Supported versions
 
-Security fixes are released for the latest published minor version on npm
-(`@liiift-studio/pdf-redact`). Older versions are not patched — upgrade to the
-latest before reporting.
+Security fixes are released for the latest published version on npm
+(`scrubzero`). Older versions are not patched — upgrade to the latest before
+reporting.
 
 | Version | Supported |
 |---------|-----------|
-| latest `0.x` | ✅ |
+| latest `1.x` | ✅ |
+| `@liiift-studio/pdf-redact`, `@liiift-studio/unseal` (deprecated) | ❌ (migrate to `scrubzero`) |
 | older | ❌ (upgrade first) |
 
 ## Reporting a vulnerability
@@ -20,9 +21,9 @@ latest before reporting.
 **Please do not open a public issue for security problems.**
 
 - Preferred: use GitHub's private vulnerability reporting —
-  **[Report a vulnerability](https://github.com/Liiift-Studio/pdf-redact/security/advisories/new)**
+  **[Report a vulnerability](https://github.com/Liiift-Studio/scrubzero/security/advisories/new)**
   (Security tab → "Report a vulnerability").
-- Or email **hello@liiift.studio** with `[pdf-redact security]` in the subject.
+- Or email **hello@liiift.studio** with `[scrubzero security]` in the subject.
 
 Please include: the affected version, a minimal reproduction (ideally a small
 non-sensitive PDF — do **not** send real personal data), and what you observed vs.

@@ -13,14 +13,14 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: What you'd like pdf-redact to do. API sketch welcome.
+      description: What you'd like scrubzero to do. API sketch welcome.
     validations:
       required: false
   - type: checkboxes
     id: constraints
     attributes:
       label: Fit with the project's constraints
-      description: pdf-redact stays small, auditable, and dependency-light (runs in Lambda, no native binaries).
+      description: scrubzero stays small, auditable, and dependency-light (runs in Lambda, no native binaries).
       options:
         - label: This keeps the library dependency-light and Lambda-friendly (or I've noted why a new dependency is worth it)
         - label: This is in scope for a focused redaction library (not a general PDF suite)

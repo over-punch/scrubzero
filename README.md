@@ -1,44 +1,49 @@
-# pdf-redact
+# scrubzero
 
-[![npm version](https://img.shields.io/npm/v/@liiift-studio/pdf-redact.svg)](https://www.npmjs.com/package/@liiift-studio/pdf-redact)
-[![npm downloads](https://img.shields.io/npm/dm/@liiift-studio/pdf-redact.svg)](https://www.npmjs.com/package/@liiift-studio/pdf-redact)
-[![CI](https://github.com/Liiift-Studio/pdf-redact/actions/workflows/ci.yml/badge.svg)](https://github.com/Liiift-Studio/pdf-redact/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/@liiift-studio/pdf-redact.svg)](#license)
-[![node](https://img.shields.io/node/v/@liiift-studio/pdf-redact.svg)](#nodejs-and-lambda-compatibility)
+[![npm version](https://img.shields.io/npm/v/scrubzero.svg)](https://www.npmjs.com/package/scrubzero)
+[![npm downloads](https://img.shields.io/npm/dm/scrubzero.svg)](https://www.npmjs.com/package/scrubzero)
+[![CI](https://github.com/Liiift-Studio/scrubzero/actions/workflows/ci.yml/badge.svg)](https://github.com/Liiift-Studio/scrubzero/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/scrubzero.svg)](#license)
+[![node](https://img.shields.io/node/v/scrubzero.svg)](#nodejs-and-lambda-compatibility)
 
-**True PDF content-stream redaction for Node.js and Lambda. No native binaries.**
+**The PDF redaction toolkit for Node.js and Lambda. No native binaries.**
 
-Unlike overlay-only tools that paint a black rectangle on top of text (which can be removed with a PDF editor), `pdf-redact` strips the text-drawing operators out of the PDF content stream **and** draws a visual bar over the region. The text is genuinely removed — not just hidden — and a built-in [`verify()`](#verifypdf) step proves it.
+Two complementary halves, one package:
+
+- **Redact** — strip the text-drawing operators out of the PDF content stream **and** draw a visual bar, so the text is genuinely removed (not just covered), with a built-in [`verify()`](#verifypdf) that proves it. Plus entity/FOIA patterns, exemption stamping, and an audit-log manifest.
+- **Audit & unseal** — go the other way: detect *fake* redaction in a PDF you received (text under boxes, recoverable prior revisions, metadata/annotation leaks) and lift the fake bars to reveal what they hid. See [Audit &amp; unseal](#audit--unseal).
+
+> Powers [scrubzero.org](https://scrubzero.org). Folds in the former `@liiift-studio/unseal` package (now deprecated).
 
 > Pure TypeScript on top of `pdf-lib` + `pdfjs-dist`. No `qpdf`, no Ghostscript, no native addons — deploys to AWS Lambda as-is.
 
 > **The one rule:** content-stream scrubbing is best-effort, so the real guarantee is **redact → [`verify()`](#verifypdf) → reject anything that isn't `clean`**. See [Limitations & security model](#limitations--security-model) before relying on it for high-stakes redaction.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Liiift-Studio/pdf-redact/main/assets/cli-demo.gif?v=1" alt="pdf-redact CLI: redact SSN, email and phone, search-and-redact a name, then verify no recoverable text remains" width="760">
+  <img src="https://raw.githubusercontent.com/Liiift-Studio/scrubzero/main/assets/cli-demo.gif?v=1" alt="scrubzero CLI: redact SSN, email and phone, search-and-redact a name, then verify no recoverable text remains" width="760">
 </p>
 
 ### Redacted text is gone, not covered
 
 | Before | After |
 |--------|-------|
-| ![Original PDF showing a patient intake record with name, SSN, email and phone](https://raw.githubusercontent.com/Liiift-Studio/pdf-redact/main/assets/before.png?v=1) | ![Same record with the SSN, email, phone, and name covered by solid bars, one labelled REDACTED](https://raw.githubusercontent.com/Liiift-Studio/pdf-redact/main/assets/after.png?v=1) |
+| ![Original PDF showing a patient intake record with name, SSN, email and phone](https://raw.githubusercontent.com/Liiift-Studio/scrubzero/main/assets/before.png?v=1) | ![Same record with the SSN, email, phone, and name covered by solid bars, one labelled REDACTED](https://raw.githubusercontent.com/Liiift-Studio/scrubzero/main/assets/after.png?v=1) |
 
 The bars in the "after" image aren't just paint: the underlying glyphs have been blanked in the content stream, so a copy-paste or `pdftotext` of that region returns nothing.
 
 ## Install
 
 ```bash
-npm install @liiift-studio/pdf-redact
+npm install scrubzero
 ```
 
-> Published as the scoped package **`@liiift-studio/pdf-redact`**. Product site: [scrubzero.org](https://scrubzero.org).
+> Published as the scoped package **`scrubzero`**. Product site: [scrubzero.org](https://scrubzero.org).
 
 ## Quick start
 
 ```typescript
 import { readFile, writeFile } from 'node:fs/promises';
-import { redact, searchAndRedact } from '@liiift-studio/pdf-redact';
+import { redact, searchAndRedact } from 'scrubzero';
 
 // --- Redact a known region ---
 const pdfBytes = await readFile('input.pdf');
@@ -70,17 +75,17 @@ await writeFile('output-search.pdf', result2.pdf);
 
 ```bash
 # Search and redact by pattern (plain text or /regex/)
-npx @liiift-studio/pdf-redact search input.pdf "John Smith" --output redacted.pdf
-npx @liiift-studio/pdf-redact search input.pdf "/\d{3}-\d{2}-\d{4}/" --output redacted.pdf
+npx scrubzero search input.pdf "John Smith" --output redacted.pdf
+npx scrubzero search input.pdf "/\d{3}-\d{2}-\d{4}/" --output redacted.pdf
 
 # Redact built-in entity types
-npx @liiift-studio/pdf-redact entities input.pdf --types ssn,email,phone --output redacted.pdf
+npx scrubzero entities input.pdf --types ssn,email,phone --output redacted.pdf
 
 # Verify a redacted PDF has no text under visual bars (exits non-zero on a violation)
-npx @liiift-studio/pdf-redact verify redacted.pdf
+npx scrubzero verify redacted.pdf
 
 # Redact a specific region by coordinates
-npx @liiift-studio/pdf-redact redact input.pdf '[{"page":1,"x":100,"y":200,"width":300,"height":20}]' --output out.pdf
+npx scrubzero redact input.pdf '[{"page":1,"x":100,"y":200,"width":300,"height":20}]' --output out.pdf
 ```
 
 Common flags:
@@ -99,7 +104,7 @@ Common flags:
 
 Most "redaction" tools work by drawing a black rectangle **on top** of the original text layer. The text is still encoded in the file and trivially extractable — copy-paste it, run `pdftotext`, or open the file in a PDF editor and delete the rectangle. This is not redaction.
 
-`pdf-redact` removes text drawing operators from the content stream bytes before writing the output, making the redacted content unrecoverable without specialised forensic tooling.
+`scrubzero` removes text drawing operators from the content stream bytes before writing the output, making the redacted content unrecoverable without specialised forensic tooling.
 
 ```mermaid
 flowchart LR
@@ -199,7 +204,7 @@ const result = await searchAndRedact(pdfBytes.buffer, [
 Redact built-in entity types using pre-built regex patterns.
 
 ```typescript
-import { redactEntities, EntityPatterns } from '@liiift-studio/pdf-redact';
+import { redactEntities, EntityPatterns } from 'scrubzero';
 
 const result = await redactEntities(pdfBytes.buffer, ['ssn', 'email', 'phone']);
 ```
@@ -215,7 +220,7 @@ Available entity types: `ssn`, `phone`, `email`, `credit-card`, `ip-address`, `d
 Every redaction can carry an **exemption code** — stamped on the bar (with `addRedactionMarkers`) and recorded per-match in the audit manifest (with `generateManifest`). A FOIA officer applying different exemptions to different data on the same page gets a defensible, per-redaction log; a flawless scrub with no exemption stamp is not a releasable record.
 
 ```typescript
-import { redactEntities, DEFAULT_FOIA_EXEMPTIONS } from '@liiift-studio/pdf-redact';
+import { redactEntities, DEFAULT_FOIA_EXEMPTIONS } from 'scrubzero';
 
 const result = await redactEntities(
   pdfBytes.buffer,
@@ -230,8 +235,8 @@ const result = await redactEntities(
 `DEFAULT_FOIA_EXEMPTIONS` maps each entity type to a sensible default code/basis (PII → `(b)(6)` personal privacy, privilege markers → `(b)(5)`). `searchAndRedact` accepts `exemptionCode`/`exemptionBasis` per `SearchPattern` for custom patterns. From the CLI:
 
 ```bash
-pdf-redact entities document.pdf --types ssn,email --foia --manifest --redactor agent-7
-pdf-redact search document.pdf "Case 1:24-cr-00318" --exemption "(b)(7)(C)" --manifest
+scrubzero entities document.pdf --types ssn,email --foia --manifest --redactor agent-7
+scrubzero search document.pdf "Case 1:24-cr-00318" --exemption "(b)(7)(C)" --manifest
 ```
 
 The `--manifest` flag writes `<output>.manifest.json` — the exportable redaction log — alongside the redacted PDF.
@@ -243,7 +248,7 @@ The `--manifest` flag writes `<output>.manifest.json` — the exportable redacti
 Process multiple PDFs concurrently with per-item error isolation. Each result's `error` is a **string** message (empty/undefined on success).
 
 ```typescript
-import { redactBatch } from '@liiift-studio/pdf-redact';
+import { redactBatch } from 'scrubzero';
 
 const results = await redactBatch([
   { pdf: pdf1.buffer, patterns: [{ pattern: /SSN:\s*\d{3}-\d{2}-\d{4}/g }] },
@@ -263,7 +268,7 @@ for (const r of results) {
 Redact PHI using a standalone detector function. The detector receives text items with their PDF coordinates (bottom-left origin) and returns bounding boxes to redact.
 
 ```typescript
-import { redactWithPHIDetector } from '@liiift-studio/pdf-redact';
+import { redactWithPHIDetector } from 'scrubzero';
 
 const result = await redactWithPHIDetector(
   pdfBytes.buffer,
@@ -284,7 +289,7 @@ const result = await redactWithPHIDetector(
 Verify that a redacted PDF has no text remaining beneath its visual redaction bars. Re-extracts text and filled rectangles with `pdfjs-dist` and reports any text that overlaps a bar — so it catches the case where a bar was drawn but the content-stream scrub missed.
 
 ```typescript
-import { verify } from '@liiift-studio/pdf-redact';
+import { verify } from 'scrubzero';
 
 const result = await verify(redactedPdf.buffer);
 console.log(result.clean);       // true if no recoverable TEXT found under any bar
@@ -309,6 +314,39 @@ interface VerificationWarning {
 > **`clean` covers the text layer only.** The text check is blind to raster imagery, so a **scanned page** — or a bar drawn over an image — can return `clean: true` while the sensitive content survives in the image pixels. When that risk is present, `verify()` populates `warnings`. **A document is only verifiably safe when `clean === true` *and* `warnings` is empty**; the CLI's `verify` command exits non-zero if either check fails.
 
 > **Treat `verify()` as part of the redaction, not an afterthought.** Because content-stream scrubbing is best-effort (see below), running `verify()` on the output — and failing closed when it isn't clean — is what turns "looks redacted" into "is redacted".
+
+---
+
+## Audit & unseal
+
+The other half of the toolkit (folded in from the former `@liiift-studio/unseal`): given a PDF you *received*, is it actually redacted? `audit()` reports fake or insecure redaction; `unseal()` lifts the fake bars and returns a readable PDF plus what was recovered.
+
+`verify()` (above) is the narrow post-redaction self-check on **your own** output; `audit()` is the broader forensic pass on **someone else's** document.
+
+```typescript
+import { audit, unseal, AuditPresets } from 'scrubzero';
+
+const report = await audit(pdf.buffer, AuditPresets.quick);
+// report.clean       — false if any fake/insecure redaction was found
+// report.findings[]  — { check, severity, page, bbox, detail, recoveredText }
+//                      checks: text-under-box | incremental-save | metadata-leak
+//                              | pending-annotation | glyph-position
+// report.sha256      — digest of the audited bytes
+
+const result = await unseal(pdf.buffer);
+// result.pdf         — the document with the fake redaction stripped (now readable)
+// result.findings[]  — what was recovered and how it was hidden
+// result.auditReport — the full audit of the original
+```
+
+Presets: `AuditPresets.quick` (fast structural checks), `.compliance` (adds glyph-position analysis), `.forensic` (all deterministic checks). CLI:
+
+```bash
+npx scrubzero audit received.pdf --preset forensic --json
+npx scrubzero strip received.pdf --output revealed.pdf --report findings.json
+```
+
+> The LLM "pattern oracle" (Tier 3 candidate ranking) from the standalone `unseal` package is **not** bundled here — scrubzero stays dependency-light (no AI SDK). The deterministic checks are the audit.
 
 ---
 
@@ -343,13 +381,13 @@ The manifest (when requested) records, per region, the page, bounding box, `reda
 
 ## Limitations & security model
 
-`pdf-redact` does real content-stream removal, but you should understand exactly what that guarantee covers before relying on it for high-stakes redaction:
+`scrubzero` does real content-stream removal, but you should understand exactly what that guarantee covers before relying on it for high-stakes redaction:
 
 - **Content-stream scrubbing is best-effort, with a safe fallback.** Scrubbing parses raw (often FlateDecode-compressed) content streams and blanks the string arguments of text operators inside the target region. If a stream can't be parsed — unusual encodings, exotic compression, malformed PDFs — the scrub is skipped and **the visual bar is still drawn**, so the region never looks un-redacted, but the underlying text may survive. **Always run [`verify()`](#verifypdf) and fail closed on violations.**
 - **`verify()` is itself best-effort and can fail *open*.** It re-extracts text and detects filled bars with `pdfjs`; if a page can't be parsed it reports **no** violations, so `clean === true` can mean "nothing left to recover" *or* "this page couldn't be analysed". Don't treat a clean result on an unusual/unparseable file as proof on its own — combine it with an out-of-band check (e.g. confirm `pdftotext` of the region is empty) for the highest-stakes documents.
 - **The redacted string may persist outside the page content.** Redaction targets the visible text layer. Values can also live in PDF **form fields (AcroForm)**, **bookmarks/named destinations**, **embedded files**, or **prior incremental-update revisions**; these are not scrubbed. Re-save through a linearising/sanitising step, or strip those structures, if they might carry the sensitive value.
 - **Region matching is heuristic.** Text position is estimated from `Tm`/`Td` operators with a small margin and assumes scale ≈ 1 / no rotation. Heavily transformed, rotated, or vector-outlined text may not be matched precisely.
-- **Only the text layer is touched — but scanned pages are now flagged.** Text rendered as part of an embedded **image** (a scanned page, a screenshot) is covered by the bar but not removed — there is no OCR layer to strip. `pdf-redact` detects this: `redact()` returns a `scanned-page`/`visual-only-region` **warning** and `verify()` returns a `scanned-page` warning instead of a false `clean`. Treat those warnings as "not redacted" — for scanned documents, rasterise-and-replace is the safer approach.
+- **Only the text layer is touched — but scanned pages are now flagged.** Text rendered as part of an embedded **image** (a scanned page, a screenshot) is covered by the bar but not removed — there is no OCR layer to strip. `scrubzero` detects this: `redact()` returns a `scanned-page`/`visual-only-region` **warning** and `verify()` returns a `scanned-page` warning instead of a false `clean`. Treat those warnings as "not redacted" — for scanned documents, rasterise-and-replace is the safer approach.
 - **No image or vector-content redaction.** Redaction targets text. Logos, photos, and drawings under a bar are hidden visually but remain in the file. Regions over such content raise a `visual-only-region` warning so the caller isn't misled by a green result.
 - **Synthetic data only in examples.** The sample document and patterns above use fake, non-real identifiers.
 
@@ -357,7 +395,7 @@ For anything where exposure is unacceptable, redact → `verify()` → reject an
 
 ## Node.js and Lambda compatibility
 
-`pdf-redact` targets Node.js >=18 and has no native binary dependencies. It ships as dual ESM + CJS so it works in both `"type": "module"` packages and CommonJS environments.
+`scrubzero` targets Node.js >=18 and has no native binary dependencies. It ships as dual ESM + CJS so it works in both `"type": "module"` packages and CommonJS environments.
 
 On AWS Lambda, deploy as-is — no additional configuration needed. The package uses Node.js built-in `zlib` for PDF stream decompression rather than native addons.
 
