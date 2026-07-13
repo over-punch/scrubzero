@@ -16,7 +16,7 @@ interface Finding {
 type State =
 	| { status: "idle" }
 	| { status: "scanning" }
-	| { status: "scanned"; findings: Finding[]; pageCount: number; aiUsed: boolean; total: number; scanned: boolean }
+	| { status: "scanned"; findings: Finding[]; pageCount: number; aiUsed: boolean; total: number; scanned: boolean; aiError?: string; aiSource?: string | null; creditsRemaining?: number }
 	| { status: "redacting" }
 	| { status: "done"; blob: Blob; filename: string; redactedCount: number; manifest: unknown | null }
 	| { status: "error"; message: string }
@@ -51,14 +51,16 @@ export default function DetectDemo() {
 		setState({ status: "scanning" })
 		const form = new FormData()
 		form.set("pdf", file)
-		form.set("options", JSON.stringify({ ai: useAI, apiKey: useAI ? apiKey : undefined }))
+		// Send a BYOK key only if one was typed; otherwise the server uses the
+		// signed-in account's credits (if any).
+		form.set("options", JSON.stringify({ ai: useAI, apiKey: useAI && apiKey.trim() ? apiKey.trim() : undefined }))
 		try {
 			const res = await fetch("/api/detect", { method: "POST", body: form })
-			const data = await res.json() as { findings?: Finding[]; pageCount?: number; aiUsed?: boolean; total?: number; scanned?: boolean; error?: string }
+			const data = await res.json() as { findings?: Finding[]; pageCount?: number; aiUsed?: boolean; total?: number; scanned?: boolean; aiError?: string; aiSource?: string | null; creditsRemaining?: number; error?: string }
 			if (!res.ok || data.error) { setState({ status: "error", message: data.error ?? "Detection failed" }); return }
 			const findings = data.findings ?? []
 			setSelected(new Set(findings.map((f) => f.type))) // default: redact everything found
-			setState({ status: "scanned", findings, pageCount: data.pageCount ?? 0, aiUsed: !!data.aiUsed, total: data.total ?? 0, scanned: !!data.scanned })
+			setState({ status: "scanned", findings, pageCount: data.pageCount ?? 0, aiUsed: !!data.aiUsed, total: data.total ?? 0, scanned: !!data.scanned, aiError: data.aiError, aiSource: data.aiSource, creditsRemaining: data.creditsRemaining })
 		} catch {
 			setState({ status: "error", message: "Network error — please try again" })
 		}
@@ -162,12 +164,12 @@ export default function DetectDemo() {
 							type="password"
 							value={apiKey}
 							onChange={(e) => setApiKey(e.target.value)}
-							placeholder="Anthropic API key — sk-ant-…"
+							placeholder="Anthropic API key — sk-ant-…  (optional)"
 							className="field rounded px-3 py-2 text-xs font-mono"
 							autoComplete="off"
 						/>
 						<p className="mono-label" style={{ color: "var(--ink-faint)", letterSpacing: "0.08em" }}>
-							Used once for this scan · never stored or logged · paid accounts (no key needed) coming soon
+							Bring your own key (used once, never stored) — or leave it blank and <a href="/account" className="underline" style={{ color: "var(--ink-dim)" }}>sign in</a> for 500 free scans, then 1 credit per scan.
 						</p>
 					</div>
 				)}
@@ -177,7 +179,7 @@ export default function DetectDemo() {
 			<button
 				type="button"
 				onClick={scan}
-				disabled={!file || state.status === "scanning" || (useAI && apiKey.trim() === "")}
+				disabled={!file || state.status === "scanning"}
 				className="self-start rounded px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
 				style={{ background: "var(--btn-bg)", color: "var(--btn-fg)", fontFamily: "var(--font-mono)" }}
 			>
@@ -193,6 +195,25 @@ export default function DetectDemo() {
 					<p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
 						Detection reads the document&apos;s text layer — a scan has none, so anything sensitive here lives in the page image and <em style={{ fontStyle: "normal", color: "var(--foreground)" }}>cannot be found or redacted by text tools</em>. A &ldquo;nothing found&rdquo; result does not mean the page is clean. Run the page through OCR first, or rasterise-and-replace to truly redact it.
 					</p>
+				</div>
+			)}
+
+			{/* AI tier couldn't run — tell the user what to do about it. */}
+			{state.status === "scanned" && state.aiError && (
+				<div className="alert rounded px-4 py-3 flex flex-col gap-1.5" data-tone="warn">
+					{state.aiError === "sign-in-required" ? (
+						<p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+							AI detection didn&apos;t run — it needs your own Anthropic key, or an account. <a href="/account" className="underline" style={{ color: "var(--foreground)" }}>Sign in for 500 free scans →</a> Regex results below still ran.
+						</p>
+					) : state.aiError === "insufficient-credits" ? (
+						<p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+							You&apos;re out of AI credits ({state.creditsRemaining ?? 0} left). <a href="/account" className="underline" style={{ color: "var(--foreground)" }}>Buy more →</a> or paste your own key above. Regex results below still ran.
+						</p>
+					) : (
+						<p className="text-xs leading-relaxed" style={{ color: "var(--ink-dim)" }}>
+							AI detection needs your own Anthropic key on this deployment — paste one above. Regex results below still ran.
+						</p>
+					)}
 				</div>
 			)}
 

@@ -1,9 +1,11 @@
 // /api/detect — scan a PDF for content that *should* be redacted.
 // Free tier: deterministic entity regexes from scrubzero.
-// AI tier (bring-your-own-key): an LLM pass for the entities regex can't catch
-// — person names, organisations, street addresses. The key is used for this one
-// request and never stored or logged.
+// AI tier — two ways to run the LLM pass (person names, orgs, addresses):
+//   • BYOK: caller supplies their own Anthropic key (free, used once, never stored).
+//   • Hosted: signed-in users spend 1 credit per scan and we use the server key
+//     (no key needed). Phase 1 — not yet BAA-covered.
 import { type NextRequest, NextResponse } from "next/server"
+import { auth } from "@/auth"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -114,22 +116,53 @@ export async function POST(req: NextRequest) {
 			}
 		}
 
-		// ── AI tier (BYOK) ──────────────────────────────────────────
+		// ── AI tier: BYOK (free) or hosted (1 credit/scan) ──────────
 		let aiUsed = false
-		if (opts.ai && opts.apiKey) {
-			aiUsed = true
-			const ai = await aiEntities(pages, opts.apiKey)
-			const byType = new Map<string, { samples: string[]; seen: Set<string>; pages: Set<number> }>()
-			for (const e of ai) {
-				const key = e.type
-				if (!byType.has(key)) byType.set(key, { samples: [], seen: new Set(), pages: new Set() })
-				const b = byType.get(key)!
-				b.pages.add(e.page)
-				if (!b.seen.has(e.text)) { b.seen.add(e.text); if (b.samples.length < 4) b.samples.push(e.text) }
+		let aiSource: "byok" | "credits" | null = null
+		let creditsRemaining: number | undefined
+		let aiError: "sign-in-required" | "insufficient-credits" | "byok-required" | undefined
+		if (opts.ai) {
+			let key = opts.apiKey?.trim() || undefined
+			if (key) {
+				aiSource = "byok"
+			} else if (process.env.ANTHROPIC_API_KEY) {
+				// Hosted path: require a signed-in user and spend one credit.
+				// auth() throws if AUTH_SECRET is unset — treat that as not-signed-in.
+				let email: string | null | undefined
+				try { email = (await auth())?.user?.email } catch { email = null }
+				if (!email) {
+					aiError = "sign-in-required"
+				} else {
+					const { tryConsumeCredits } = await import("@/lib/credits")
+					const consumed = await tryConsumeCredits(email, 1)
+					creditsRemaining = consumed.remaining
+					if (!consumed.ok) {
+						aiError = "insufficient-credits"
+					} else {
+						key = process.env.ANTHROPIC_API_KEY
+						aiSource = "credits"
+					}
+				}
+			} else {
+				// No server key configured — the only AI option is BYOK.
+				aiError = "byok-required"
 			}
-			const LABELS: Record<string, string> = { person: "Person name", org: "Organisation", address: "Address" }
-			for (const [type, b] of byType) {
-				findings.push({ type: `ai-${type}`, label: LABELS[type] ?? type, count: b.seen.size, samples: b.samples, values: [...b.seen].slice(0, 100), pages: [...b.pages].sort((a, b2) => a - b2), tier: "ai" })
+
+			if (key && aiSource) {
+				aiUsed = true
+				const ai = await aiEntities(pages, key)
+				const byType = new Map<string, { samples: string[]; seen: Set<string>; pages: Set<number> }>()
+				for (const e of ai) {
+					const k = e.type
+					if (!byType.has(k)) byType.set(k, { samples: [], seen: new Set(), pages: new Set() })
+					const b = byType.get(k)!
+					b.pages.add(e.page)
+					if (!b.seen.has(e.text)) { b.seen.add(e.text); if (b.samples.length < 4) b.samples.push(e.text) }
+				}
+				const LABELS: Record<string, string> = { person: "Person name", org: "Organisation", address: "Address" }
+				for (const [type, b] of byType) {
+					findings.push({ type: `ai-${type}`, label: LABELS[type] ?? type, count: b.seen.size, samples: b.samples, values: [...b.seen].slice(0, 100), pages: [...b.pages].sort((a, b2) => a - b2), tier: "ai" })
+				}
 			}
 		}
 
@@ -137,6 +170,9 @@ export async function POST(req: NextRequest) {
 			findings,
 			pageCount: pages.length,
 			aiUsed,
+			aiSource,
+			creditsRemaining,
+			aiError,
 			scanned,
 			total: findings.reduce((s, f) => s + f.count, 0),
 		})
