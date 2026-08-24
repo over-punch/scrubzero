@@ -75,6 +75,39 @@ async function aiEntities(pages: string[], apiKey: string): Promise<Array<{ type
 	return out
 }
 
+// Hosted AI pass via the Vercel AI Gateway (observability + cost tracking, no raw
+// provider key in this app). The AI SDK auto-routes a `provider/model` string
+// through the gateway using AI_GATEWAY_API_KEY. Model overridable via
+// AI_GATEWAY_MODEL. Returns [] on any failure — best-effort like the BYOK path.
+async function aiEntitiesViaGateway(pages: string[]): Promise<Array<{ type: string; text: string; page: number }>> {
+	const { generateText, Output } = await import("ai")
+	const { z } = await import("zod")
+	const model = process.env.AI_GATEWAY_MODEL || "anthropic/claude-haiku-4.5"
+	const schema = z.object({
+		entities: z.array(z.object({
+			type: z.enum(["person", "org", "address"]),
+			text: z.string(),
+		})),
+	})
+	const system =
+		"You extract sensitive entities from document text for redaction review. Include person names, organisation names, and street/mailing addresses. Do NOT include emails, phone numbers, SSNs, dates, or IP addresses (handled elsewhere)."
+	const out: Array<{ type: string; text: string; page: number }> = []
+	const slice = pages.slice(0, 12)
+	for (let i = 0; i < slice.length; i++) {
+		const body = slice[i].slice(0, 6000).trim()
+		if (body.length < 3) continue
+		try {
+			const { output } = await generateText({ model, output: Output.object({ schema }), system, prompt: body })
+			for (const e of output.entities) {
+				if (e?.text && e.text.length > 1) out.push({ type: e.type, text: e.text.trim(), page: i + 1 })
+			}
+		} catch {
+			// best-effort per page
+		}
+	}
+	return out
+}
+
 export async function POST(req: NextRequest) {
 	try {
 		const form = await req.formData()
@@ -122,11 +155,12 @@ export async function POST(req: NextRequest) {
 		let creditsRemaining: number | undefined
 		let aiError: "sign-in-required" | "insufficient-credits" | "byok-required" | undefined
 		if (opts.ai) {
-			let key = opts.apiKey?.trim() || undefined
+			const key = opts.apiKey?.trim() || undefined
 			if (key) {
 				aiSource = "byok"
-			} else if (process.env.ANTHROPIC_API_KEY) {
-				// Hosted path: require a signed-in user and spend one credit.
+			} else if (process.env.AI_GATEWAY_API_KEY) {
+				// Hosted path: run through the Vercel AI Gateway (no raw provider key
+				// in this app). Require a signed-in user and spend one credit.
 				// auth() throws if AUTH_SECRET is unset — treat that as not-signed-in.
 				let email: string | null | undefined
 				try { email = (await auth())?.user?.email } catch { email = null }
@@ -139,18 +173,19 @@ export async function POST(req: NextRequest) {
 					if (!consumed.ok) {
 						aiError = "insufficient-credits"
 					} else {
-						key = process.env.ANTHROPIC_API_KEY
 						aiSource = "credits"
 					}
 				}
 			} else {
-				// No server key configured — the only AI option is BYOK.
+				// No gateway configured — the only AI option is BYOK.
 				aiError = "byok-required"
 			}
 
-			if (key && aiSource) {
+			if (aiSource) {
 				aiUsed = true
-				const ai = await aiEntities(pages, key)
+				// BYOK uses the caller's Anthropic key directly (free); the credits
+				// path routes through the AI Gateway (metered, observable).
+				const ai = aiSource === "byok" ? await aiEntities(pages, key!) : await aiEntitiesViaGateway(pages)
 				const byType = new Map<string, { samples: string[]; seen: Set<string>; pages: Set<number> }>()
 				for (const e of ai) {
 					const k = e.type
