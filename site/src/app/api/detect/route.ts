@@ -91,13 +91,20 @@ async function aiEntitiesViaGateway(pages: string[]): Promise<Array<{ type: stri
 	})
 	const system =
 		"You extract sensitive entities from document text for redaction review. Include person names, organisation names, and street/mailing addresses. Do NOT include emails, phone numbers, SSNs, dates, or IP addresses (handled elsewhere)."
+	// Compliance posture: never let the provider train on document text; and, when
+	// the Vercel plan supports request-level ZDR (Pro/Enterprise), route only to
+	// zero-data-retention providers. ZDR is opt-in via AI_GATEWAY_ZDR because it
+	// FAILS the request if no ZDR-eligible provider is available.
+	const gateway: Record<string, boolean | string[]> = { disallowPromptTraining: true, tags: ["scrubzero-detect"] }
+	if (process.env.AI_GATEWAY_ZDR === "true") gateway.zeroDataRetention = true
+
 	const out: Array<{ type: string; text: string; page: number }> = []
 	const slice = pages.slice(0, 12)
 	for (let i = 0; i < slice.length; i++) {
 		const body = slice[i].slice(0, 6000).trim()
 		if (body.length < 3) continue
 		try {
-			const { output } = await generateText({ model, output: Output.object({ schema }), system, prompt: body })
+			const { output } = await generateText({ model, output: Output.object({ schema }), system, prompt: body, providerOptions: { gateway } })
 			for (const e of output.entities) {
 				if (e?.text && e.text.length > 1) out.push({ type: e.type, text: e.text.trim(), page: i + 1 })
 			}

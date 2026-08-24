@@ -9,8 +9,9 @@ export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
 	const secret = process.env.STRIPE_WEBHOOK_SECRET
+	if (!secret) return NextResponse.json({ error: "Webhook not configured" }, { status: 503 })
 	const sig = req.headers.get("stripe-signature")
-	if (!secret || !sig) return NextResponse.json({ error: "Webhook not configured" }, { status: 503 })
+	if (!sig) return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 })
 
 	// Signature verification requires the raw request body.
 	const body = await req.text()

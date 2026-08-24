@@ -77,7 +77,7 @@ export default function Check() {
 						<span>v{version}</span>
 						<span>MIT</span>
 						<span>Node.js / Lambda</span>
-						<span>4 checks + 2 tiers</span>
+						<span>5 deterministic checks</span>
 					</div>
 					<div className="mt-2 mono-label" style={{ color: "var(--ink-faint)", letterSpacing: "0.1em" }}>
 						SHA-256 · input a4f2‥e19 → output a4f2‥e19 · identical — the bar changed nothing underneath

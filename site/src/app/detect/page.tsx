@@ -59,7 +59,7 @@ export default function Detect() {
 					<span>v{version}</span>
 					<span>MIT core</span>
 					<span>Regex tier · free</span>
-					<span>AI tier · your key</span>
+					<span>AI tier · key or account</span>
 				</div>
 				<PrivacyNote ai />
 			</header>

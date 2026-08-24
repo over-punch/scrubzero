@@ -46,7 +46,7 @@ export default function Home() {
 					<span>v{version}</span>
 					<span>MIT</span>
 					<span>Node.js / Lambda</span>
-					<span>Zero-dependency core</span>
+					<span>No native binaries</span>
 				</div>
 				<PrivacyNote />
 			</header>

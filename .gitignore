@@ -13,3 +13,6 @@ coverage/
 scripts/.demo/
 .vercel
 *.tgz
+
+# editor workspace file (local)
+project.code-workspace

@@ -29,12 +29,30 @@ body {
 	-webkit-font-smoothing: antialiased;
 	/* Smooth the light↔dark flip when toggling Redact / Check. */
 	transition: background-color 0.45s ease, color 0.45s ease;
-	/* Faint engineering grid — the "form" substrate. Kept very low contrast. */
+	/* Soft sheet-of-paper lighting (fixed) over the faint engineering grid. */
 	background-image:
+		radial-gradient(145% 120% at 50% -12%, rgba(255, 255, 255, 0.05), transparent 55%),
 		linear-gradient(var(--grid) 1px, transparent 1px),
 		linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-	background-size: 28px 28px;
+	background-size: 100% 100%, 28px 28px, 28px 28px;
 	background-position: center top;
+	background-attachment: fixed, scroll, scroll;
+}
+
+/* Fine paper grain — a fixed, tiled noise texture sitting over the background but
+   behind the content. Tokenised so it darkens the cream (multiply) and lifts the
+   dark mirror (overlay). Disabled where the user prefers no texture is moot; it's
+   static, so no motion concern. */
+body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	opacity: var(--grain-opacity);
+	mix-blend-mode: var(--grain-blend);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	background-size: 200px 200px;
 }
 
 h1, h2, h3 { text-wrap: balance; }
