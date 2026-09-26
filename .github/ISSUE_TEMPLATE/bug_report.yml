@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for the report! **If the bug is that redacted content is still
         recoverable, or `verify()` reported a false clean — that's a security issue.
-        Do not file it here; [report it privately](https://github.com/Liiift-Studio/scrubzero/security/advisories/new) instead.**
+        Do not file it here; [report it privately](https://github.com/over-punch/scrubzero/security/advisories/new) instead.**
   - type: input
     id: version
     attributes:

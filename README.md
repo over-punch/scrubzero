@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/scrubzero.svg)](https://www.npmjs.com/package/scrubzero)
 [![npm downloads](https://img.shields.io/npm/dm/scrubzero.svg)](https://www.npmjs.com/package/scrubzero)
-[![CI](https://github.com/Liiift-Studio/scrubzero/actions/workflows/ci.yml/badge.svg)](https://github.com/Liiift-Studio/scrubzero/actions/workflows/ci.yml)
+[![CI](https://github.com/over-punch/scrubzero/actions/workflows/ci.yml/badge.svg)](https://github.com/over-punch/scrubzero/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/scrubzero.svg)](#license)
 [![node](https://img.shields.io/node/v/scrubzero.svg)](#nodejs-and-lambda-compatibility)
 
@@ -20,14 +20,14 @@ Two complementary halves, one package:
 > **The one rule:** content-stream scrubbing is best-effort, so the real guarantee is **redact → [`verify()`](#verifypdf) → reject anything that isn't `clean`**. See [Limitations & security model](#limitations--security-model) before relying on it for high-stakes redaction.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Liiift-Studio/scrubzero/main/assets/cli-demo.gif?v=1" alt="scrubzero CLI: redact SSN, email and phone, search-and-redact a name, then verify no recoverable text remains" width="760">
+  <img src="https://raw.githubusercontent.com/over-punch/scrubzero/main/assets/cli-demo.gif?v=1" alt="scrubzero CLI: redact SSN, email and phone, search-and-redact a name, then verify no recoverable text remains" width="760">
 </p>
 
 ### Redacted text is gone, not covered
 
 | Before | After |
 |--------|-------|
-| ![Original PDF showing a patient intake record with name, SSN, email and phone](https://raw.githubusercontent.com/Liiift-Studio/scrubzero/main/assets/before.png?v=1) | ![Same record with the SSN, email, phone, and name covered by solid bars, one labelled REDACTED](https://raw.githubusercontent.com/Liiift-Studio/scrubzero/main/assets/after.png?v=1) |
+| ![Original PDF showing a patient intake record with name, SSN, email and phone](https://raw.githubusercontent.com/over-punch/scrubzero/main/assets/before.png?v=1) | ![Same record with the SSN, email, phone, and name covered by solid bars, one labelled REDACTED](https://raw.githubusercontent.com/over-punch/scrubzero/main/assets/after.png?v=1) |
 
 The bars in the "after" image aren't just paint: the underlying glyphs have been blanked in the content stream, so a copy-paste or `pdftotext` of that region returns nothing.
 

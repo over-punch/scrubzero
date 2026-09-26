@@ -21,7 +21,7 @@ reporting.
 **Please do not open a public issue for security problems.**
 
 - Preferred: use GitHub's private vulnerability reporting —
-  **[Report a vulnerability](https://github.com/Liiift-Studio/scrubzero/security/advisories/new)**
+  **[Report a vulnerability](https://github.com/over-punch/scrubzero/security/advisories/new)**
   (Security tab → "Report a vulnerability").
 - Or email **hello@liiift.studio** with `[scrubzero security]` in the subject.
 

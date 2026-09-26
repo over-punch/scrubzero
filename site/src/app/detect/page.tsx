@@ -126,7 +126,7 @@ export default function Detect() {
 				</div>
 				<div className="flex flex-wrap items-center gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>
 					<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">liiift.studio</a>
-					<a href="https://github.com/Liiift-Studio/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
+					<a href="https://github.com/over-punch/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
 					<a href="https://npmjs.com/package/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
 					<span>v{version}</span>
 					<span className="ml-auto px-1.5 py-0.5" style={{ color: "var(--ink-faint)", border: "1px solid var(--border)", borderRadius: "2px", letterSpacing: "0.08em" }}>

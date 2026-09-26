@@ -12,7 +12,7 @@ binaries — and contributions that keep it that way are very welcome.
 Requires Node.js >= 18.
 
 ```bash
-git clone https://github.com/Liiift-Studio/scrubzero
+git clone https://github.com/over-punch/scrubzero
 cd scrubzero
 npm install
 npm run build       # tsup → dual ESM + CJS in dist/
@@ -51,7 +51,7 @@ typechecks) → `npm publish`. Bump the `pkg.version` string in `src/cli.ts` to 
 
 ## Reporting bugs & ideas
 
-Open a [bug report](https://github.com/Liiift-Studio/scrubzero/issues/new/choose) or
+Open a [bug report](https://github.com/over-punch/scrubzero/issues/new/choose) or
 a feature request via the issue templates. For open-ended questions, start a
 Discussion. By contributing, you agree your work is licensed under the project's
 [MIT License](LICENSE).

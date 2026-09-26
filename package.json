@@ -48,10 +48,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Liiift-Studio/scrubzero.git"
+    "url": "git+https://github.com/over-punch/scrubzero.git"
   },
   "bugs": {
-    "url": "https://github.com/Liiift-Studio/scrubzero/issues"
+    "url": "https://github.com/over-punch/scrubzero/issues"
   },
   "homepage": "https://scrubzero.org",
   "engines": {
