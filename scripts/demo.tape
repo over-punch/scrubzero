@@ -1,4 +1,4 @@
-# pdf-redact CLI demo (README Studio / Charmbracelet VHS).
+# scrubzero CLI demo (README Studio / Charmbracelet VHS).
 # Render from the package root:  npm run capture
 # (which runs node scripts/make-fixture.mjs first, then `vhs scripts/demo.tape`)
 #
@@ -17,22 +17,22 @@ Set TypingSpeed 45ms
 
 # Work inside the demo dir so paths in the recording stay short.
 Hide
-Type "cd scripts/.demo && alias pdf-redact='node ../../dist/cli.js' && clear"
+Type "cd scripts/.demo && alias scrubzero='node ../../dist/cli.js' && clear"
 Enter
 Show
 
 # --- 1. Redact built-in entity types (SSN, email, phone) ---
-Type "pdf-redact entities sample.pdf --types ssn,email,phone --output clean.pdf"
+Type "scrubzero entities sample.pdf --types ssn,email,phone --output clean.pdf"
 Enter
 Sleep 2.5s
 
 # --- 2. Search-and-redact a literal name with a labelled bar ---
-Type 'pdf-redact search clean.pdf "Jane A. Doe" --label REDACTED --output clean.pdf'
+Type 'scrubzero search clean.pdf "Jane A. Doe" --label REDACTED --output clean.pdf'
 Enter
 Sleep 2.5s
 
 # --- 3. Verify no recoverable text remains under the bars ---
-Type "pdf-redact verify clean.pdf"
+Type "scrubzero verify clean.pdf"
 Enter
 Sleep 2.5s
 

@@ -1,4 +1,4 @@
-// All public TypeScript types and interfaces for pdf-redact
+// All public TypeScript types and interfaces for scrubzero
 
 /**
  * A rectangular region on a PDF page to be redacted.

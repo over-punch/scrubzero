@@ -1,6 +1,6 @@
 // make-fixture.mjs — generate a deterministic sample PDF for the README CLI demo.
 // Writes scripts/.demo/sample.pdf containing a few lines of synthetic sensitive data
-// (a fake SSN, email, and phone) so the recorded `pdf-redact` session is reproducible.
+// (a fake SSN, email, and phone) so the recorded `scrubzero` session is reproducible.
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';

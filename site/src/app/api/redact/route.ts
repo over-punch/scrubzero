@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
 			manifest: (result as { manifest?: unknown }).manifest ?? null,
 		})
 	} catch (err) {
-		console.error("pdf-redact error:", err)
+		console.error("scrubzero error:", err)
 		return Response.json({ error: "Redaction failed — the PDF may be malformed or encrypted" }, { status: 500 })
 	}
 }

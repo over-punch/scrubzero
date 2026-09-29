@@ -1,4 +1,4 @@
-// CLI entry point: `npx pdf-redact search <file> <pattern>` and related commands.
+// CLI entry point: `npx scrubzero search <file> <pattern>` and related commands.
 // Bundled separately as dist/cli.js with a shebang via tsup.
 
 import { program } from 'commander';
