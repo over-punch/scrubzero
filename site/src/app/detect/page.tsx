@@ -125,7 +125,7 @@ export default function Detect() {
 					</a>
 				</div>
 				<div className="flex flex-wrap items-center gap-x-6 gap-y-1" style={{ color: "var(--ink-dim)", fontFamily: "var(--font-mono)" }}>
-					<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">liiift.studio</a>
+					<a href="https://overpunch.ca" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">overpunch.ca</a>
 					<a href="https://github.com/over-punch/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">GitHub</a>
 					<a href="https://npmjs.com/package/scrubzero" target="_blank" rel="noopener noreferrer" className="hover:opacity-60 transition-opacity">npm</a>
 					<span>v{version}</span>

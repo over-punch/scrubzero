@@ -23,7 +23,7 @@ reporting.
 - Preferred: use GitHub's private vulnerability reporting —
   **[Report a vulnerability](https://github.com/over-punch/scrubzero/security/advisories/new)**
   (Security tab → "Report a vulnerability").
-- Or email **hello@liiift.studio** with `[scrubzero security]` in the subject.
+- Or email **hello@overpunch.ca** with `[scrubzero security]` in the subject.
 
 Please include: the affected version, a minimal reproduction (ideally a small
 non-sensitive PDF — do **not** send real personal data), and what you observed vs.
